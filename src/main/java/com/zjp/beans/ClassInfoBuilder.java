@@ -11,31 +11,54 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ClassInfoBuilder {
 
+    ClassInfo addScannedClass(final String className, boolean isInterface, boolean isAnnotation) {
+        ClassInfo classInfo;
+        if(infoMap.containsKey(className)) {
+            classInfo = infoMap.get(className);
+        } else {
+            infoMap.put(className, classInfo = new ClassInfo(className));
+        }
+
+        classInfo.classFileScanned = true;
+        classInfo.isInterface |= isInterface;
+        classInfo.isAnnotation |= isAnnotation;
+        return classInfo;
+    }
+
+    ClassInfo getClassInfo(String className) {
+        ClassInfo classInfo = infoMap.get(className);
+        if(classInfo == null) {
+            infoMap.put(className, classInfo = new ClassInfo(className));
+        }
+        return classInfo;
+    }
+
     /**
     * Not thread safe
+     * @param infoMap for cache all classInfo Instances
     * */
-    public void link(ScanSpecification scanSpec, Map<String, ClassInfo> infoMap) {
-        final ClassInfo classInfo = ClassInfo.addScannedClass(className, isInterface,
-                isAnnotation, scanSpec, infoMap);
+    void build(Map<String, ClassInfo> infoMap) {
+        this.infoMap = infoMap;
+        final ClassInfo classInfo = addScannedClass(className, isInterface, isAnnotation);
 
         if(StringUtils.notEmpty(superclassName)) {
-            classInfo.addSuperclass(superclassName, infoMap);
+            classInfo.addSuperclass(superclassName, this);
         }
 
         if(implementedInterfaces != null) {
-            implementedInterfaces.forEach( s -> classInfo.addImplementedInterface(s, infoMap));
+            implementedInterfaces.forEach( s -> classInfo.addImplementedInterface(s, this));
         }
 
         if(annotations != null) {
-            annotations.forEach( s -> classInfo.addAnnotation(s, infoMap));
+            annotations.forEach(s -> classInfo.addAnnotation(s, this));
         }
 
         if(methodAnnotations != null) {
-            methodAnnotations.forEach( s -> classInfo.addMethodAnnotation(s, infoMap));
+            methodAnnotations.forEach( s -> classInfo.addMethodAnnotation(s, this));
         }
 
         if(fieldAnnotations != null) {
-            fieldAnnotations.forEach( s -> classInfo.addFieldAnnotation(s, infoMap));
+            fieldAnnotations.forEach( s -> classInfo.addFieldAnnotation(s, this));
         }
 
         if(fieldInfoList != null) {
@@ -53,14 +76,6 @@ public class ClassInfoBuilder {
         }
         final String oldValue = stringInternMap.putIfAbsent(string, string);
         return oldValue == null ? string : oldValue;
-    }
-
-    public ClassInfoBuilder(final String className, final boolean isInterface, final boolean isAnnotation,
-                     final ConcurrentMap<String, String> stringInternMap) {
-        this.stringInternMap = stringInternMap;
-        this.className = intern(className);
-        this.isInterface = isInterface;
-        this.isAnnotation = isAnnotation;
     }
 
     public void addSuperclass(final String superclassName) {
@@ -109,6 +124,30 @@ public class ClassInfoBuilder {
         methodInfoList.add(methodInfo);
     }
 
+    public String getClassName() {
+        return className;
+    }
+
+    public boolean isInterface() {
+        return isInterface;
+    }
+
+    public boolean isAnnotation() {
+        return isAnnotation;
+    }
+
+    public String getSuperclassName() {
+        return superclassName;
+    }
+
+    ClassInfoBuilder(final String className, final boolean isInterface, final boolean isAnnotation,
+                     final ConcurrentMap<String, String> stringInternMap) {
+        this.stringInternMap = stringInternMap;
+        this.className = intern(className);
+        this.isInterface = isInterface;
+        this.isAnnotation = isAnnotation;
+    }
+
     private final String className;
     private final boolean isInterface;
     private final boolean isAnnotation;
@@ -120,5 +159,6 @@ public class ClassInfoBuilder {
     private Set<String> fieldAnnotations;
     private List<FieldInfo> fieldInfoList;
     private List<MethodInfo> methodInfoList;
-    private final ConcurrentMap<String, String> stringInternMap;
+    private Map<String, ClassInfo> infoMap; //intense share by all ClassInfoBuilder instance
+    private final ConcurrentMap<String, String> stringInternMap;//复用字符串
 }

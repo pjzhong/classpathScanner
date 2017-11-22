@@ -1,10 +1,10 @@
 package com.zjp.beans;
 
-import com.zjp.scanner.ScanSpecification;
 import com.zjp.utils.MultiSet;
 import com.zjp.utils.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Created by Administrator on 11/6/2017.
@@ -40,35 +40,47 @@ public class ClassInfo implements Comparable<ClassInfo> {
         return  reachableClasses;
     }
 
-    private static ClassInfo getOrCreateClassInfo(String className, ScanSpecification scanSpec,
-                                                  Map<String, ClassInfo> infoMap) {
-        ClassInfo classInfo = infoMap.get(className);
-        if(classInfo == null) {
-            infoMap.put(className, classInfo = new ClassInfo(className, scanSpec));
-        }
-        return classInfo;
-    }
-
-    static ClassInfo addScannedClass(final String className, boolean isInterface, boolean isAnnotation,
-                                     ScanSpecification scanSpec, Map<String, ClassInfo> infoMap) {
-        ClassInfo classInfo;
-        if(infoMap.containsKey(className)) {
-            classInfo = infoMap.get(className);
-        } else {
-            infoMap.put(className, classInfo = new ClassInfo(className, scanSpec));
-        }
-
-        classInfo.classFileScanned = true;
-        classInfo.isInterface |= isInterface;
-        classInfo.isAnnotation |= isAnnotation;
-        return classInfo;
-    }
-
-    void addSuperclass(String superclassName, Map<String, ClassInfo> infoMap) {
+    void addSuperclass(String superclassName, ClassInfoBuilder builder) {
         if(StringUtils.notEmpty(superclassName)) {
-            final ClassInfo superClass = getOrCreateClassInfo(superclassName, scanSpec, infoMap);
+            final ClassInfo superClass = builder.getClassInfo(superclassName);
             this.addRelatedClass(Relation.SUPERCLASSES, superClass);
             superClass.addRelatedClass(Relation.SUBCLASSES, this);
+        }
+    }
+
+    void addImplementedInterface(String interfaceName, ClassInfoBuilder builder) {
+        if(StringUtils.notEmpty(interfaceName)) {
+            final ClassInfo interfaceClass = builder.getClassInfo(interfaceName);
+            interfaceClass.isInterface = true;
+            this.addRelatedClass(Relation.IMPLEMENTED_INTERFACES, interfaceClass);
+            interfaceClass.addRelatedClass(Relation.CLASSES_IMPLEMENTING, this);
+        }
+    }
+
+    void addAnnotation(String annotationName, ClassInfoBuilder builder) {
+        if(StringUtils.notEmpty(annotationName)) {
+            final ClassInfo annotationClass = builder.getClassInfo(annotationName);
+            annotationClass.isAnnotation = true;
+            this.addRelatedClass(Relation.ANNOTATIONS, annotationClass);
+            annotationClass.addRelatedClass(Relation.ANNOTATED_CLASSES, this);
+        }
+    }
+
+    void addMethodAnnotation(String annotationName, ClassInfoBuilder builder) {
+        if(StringUtils.notEmpty(annotationName)) {
+            final ClassInfo annotationClass = builder.getClassInfo(annotationName);
+            annotationClass.isAnnotation = true;
+            this.addRelatedClass(Relation.METHOD_ANNOTATIONS, annotationClass);
+            annotationClass.addRelatedClass(Relation.CLASSES_WITH_METHOD_ANNOTATION, this);
+        }
+    }
+
+    void addFieldAnnotation(String annotationName, ClassInfoBuilder builder) {
+        if(StringUtils.notEmpty(annotationName)) {
+            final ClassInfo annotationClass = builder.getClassInfo(annotationName);
+            annotationClass.isAnnotation = true;
+            this.addRelatedClass(Relation.FIELD_ANNOTATIONS, annotationClass);
+            annotationClass.addRelatedClass(Relation.CLASSES_WITH_FIELD_ANNOTATION, this);
         }
     }
 
@@ -88,6 +100,13 @@ public class ClassInfo implements Comparable<ClassInfo> {
         this.methodInfoList.addAll(methodInfoList);
     }
 
+    Set<ClassInfo> getClassesWithFieldAnnotation() {
+        return getDirectlyRelatedClass(Relation.CLASSES_WITH_FIELD_ANNOTATION);
+    }
+
+    Set<ClassInfo> getClassesWithMethodAnnotation() {
+        return getDirectlyRelatedClass(Relation.CLASSES_WITH_METHOD_ANNOTATION);
+    }
 
     Set<ClassInfo> getClassesWithAnnotation() {
         if(!isAnnotation()) { return Collections.EMPTY_SET; }
@@ -105,56 +124,12 @@ public class ClassInfo implements Comparable<ClassInfo> {
         if(isInherited) {
             final Set<ClassInfo> classesWithAnnotationAndTheirSubclasses = new HashSet<>(classWithAnnotation);
             for(ClassInfo info : classWithAnnotation) {
-                 classesWithAnnotationAndTheirSubclasses.addAll(info.getSubClasses());
+                classesWithAnnotationAndTheirSubclasses.addAll(info.getSubClasses());
             }
             return classesWithAnnotationAndTheirSubclasses;
         }else {
             return classWithAnnotation;
         }
-    }
-
-    void addAnnotation(String annotationName, Map<String, ClassInfo> infoMap) {
-        if(StringUtils.notEmpty(annotationName)) {
-            final ClassInfo annotationClass = getOrCreateClassInfo(annotationName, scanSpec, infoMap);
-            annotationClass.isAnnotation = true;
-            this.addRelatedClass(Relation.ANNOTATIONS, annotationClass);
-            annotationClass.addRelatedClass(Relation.ANNOTATED_CLASSES, this);
-        }
-    }
-
-    void addMethodAnnotation(String annotationName, Map<String, ClassInfo> infoMap) {
-        if(StringUtils.notEmpty(annotationName)) {
-            final ClassInfo annotationClass = getOrCreateClassInfo(annotationName, scanSpec, infoMap);
-            annotationClass.isAnnotation = true;
-            this.addRelatedClass(Relation.METHOD_ANNOTATIONS, annotationClass);
-            annotationClass.addRelatedClass(Relation.CLASSES_WITH_METHOD_ANNOTATION, this);
-        }
-    }
-
-    void addFieldAnnotation(String annotationName, Map<String, ClassInfo> infoMap) {
-        if(StringUtils.notEmpty(annotationName)) {
-            final ClassInfo annotationClass = getOrCreateClassInfo(annotationName, scanSpec, infoMap);
-            annotationClass.isAnnotation = true;
-            this.addRelatedClass(Relation.FIELD_ANNOTATIONS, annotationClass);
-            annotationClass.addRelatedClass(Relation.CLASSES_WITH_FIELD_ANNOTATION, this);
-        }
-    }
-
-    void addImplementedInterface(String interfaceName, Map<String, ClassInfo> infoMap) {
-        if(StringUtils.notEmpty(interfaceName)) {
-            final ClassInfo interfaceClass = getOrCreateClassInfo(interfaceName, scanSpec, infoMap);
-            interfaceClass.isInterface = true;
-            this.addRelatedClass(Relation.IMPLEMENTED_INTERFACES, interfaceClass);
-            interfaceClass.addRelatedClass(Relation.CLASSES_IMPLEMENTING, this);
-        }
-    }
-
-    Set<ClassInfo> getClassesWithFieldAnnotation() {
-        return getDirectlyRelatedClass(Relation.CLASSES_WITH_FIELD_ANNOTATION);
-    }
-
-    Set<ClassInfo> getClassesWithMethodAnnotation() {
-        return getDirectlyRelatedClass(Relation.CLASSES_WITH_METHOD_ANNOTATION);
     }
 
     public Set<ClassInfo> getClassesImplementing() {
@@ -206,6 +181,15 @@ public class ClassInfo implements Comparable<ClassInfo> {
         return methodInfoList == null ? Collections.EMPTY_LIST: Collections.unmodifiableList(methodInfoList);
     }
 
+    ClassInfo(String className) {
+        this.className = className;
+    }
+
+    public static ClassInfoBuilder builder(String className, boolean isInterface, boolean isAnnotation,
+                                           ConcurrentMap<String, String> internMap) {
+        return new ClassInfoBuilder(className, isInterface, isAnnotation, internMap);
+    }
+
     @Override
     public int compareTo(ClassInfo o) { return this.className.compareTo(o.className); }
 
@@ -229,28 +213,20 @@ public class ClassInfo implements Comparable<ClassInfo> {
         return (isStandardClass() ? "class "  : isInterface() ? "interface " : "annotation ")  + className;
     }
 
-    private ClassInfo(String className,ScanSpecification spec) {
-        this.className = className;
-        this.scanSpec = spec;
-    }
-
     private final Map<Relation, Set<ClassInfo>> relationSet = new HashMap<>();
-    private final ScanSpecification scanSpec;
     private final String className;
 
-    private boolean isInterface;
-    private boolean isAnnotation;
+    boolean isInterface;
+    boolean isAnnotation;
     /**
      * True when a class has been scanned(i.e its classFile contents read), as opposed to only being
      * referenced by another class' classFile as a superclass/superInterface/annotation. If classFileScanned is true,
      * then this also must be a whiteListed (and non-blacklisted) class in a whiteListed(and non-blackListed) package
      * */
-    private boolean classFileScanned;
+    boolean classFileScanned;
 
     private List<FieldInfo> fieldInfoList;
-    private Map<String, FieldInfo> fieldNameToInfo;
     private List<MethodInfo> methodInfoList;
-    private Map<String, MethodInfo> methodNameToInfo;
 
     private enum Relation {
         SUPERCLASSES,
@@ -282,5 +258,4 @@ public class ClassInfo implements Comparable<ClassInfo> {
 
         CLASSES_WITH_FIELD_ANNOTATION,
     }
-
 }

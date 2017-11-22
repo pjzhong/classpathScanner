@@ -90,12 +90,7 @@ public class Scanner implements Callable<ClassGraph>{
             }
         }
 
-        Map<String, ClassInfo> infoMap = new HashMap<>();
-        for(ClassInfoBuilder builder : infoBuilders) {
-            builder.link(specification, infoMap);
-        }
-
-        ClassGraph classGraph = new ClassGraph(specification, infoMap);
+        ClassGraph classGraph = ClassGraph.builder(specification, infoBuilders).build();
         return classGraph;
     }
 }

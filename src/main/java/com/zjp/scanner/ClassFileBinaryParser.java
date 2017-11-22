@@ -1,5 +1,6 @@
 package com.zjp.scanner;
 
+import com.zjp.beans.ClassInfo;
 import com.zjp.beans.ClassInfoBuilder;
 import com.zjp.beans.FieldInfo;
 import com.zjp.beans.MethodInfo;
@@ -31,8 +32,6 @@ public class ClassFileBinaryParser {
 
         final int constantCount = classInput.readUnsignedShort();//Constant pool count
         final Object[] constantPool = new Object[constantCount];
-        final int[] indirectStringRef = new int[constantCount];
-        Arrays.fill(indirectStringRef, -1);
         for(int i = 1; i < constantCount; i++) {
             final int tag = classInput.readUnsignedByte();
             switch (tag) {
@@ -48,7 +47,7 @@ public class ClassFileBinaryParser {
                 case 6:{constantPool[i] = classInput.readDouble(); i++;} break;
                 // class String
                 case 7:
-                case 8: {indirectStringRef[i] = classInput.readUnsignedShort();} break;
+                case 8: {constantPool[i] = classInput.readUnsignedShort();} break;
                 //field-ref, method-ref, interface-ref, name and type all double-slot
                 case 9:
                 case 10:
@@ -73,11 +72,11 @@ public class ClassFileBinaryParser {
 
         //Resolve indirection of string references now that all the strings have been
         // read (allows forward references to string before they have have been encountered)
-        for(int i = 1; i < constantCount; i++) {
+/*        for(int i = 1; i < constantCount; i++) {
             if(indirectStringRef[i] >= 0) {
                 constantPool[i] = constantPool[indirectStringRef[i]];
             }
-        }
+        }*/
 
         final String className = readRefString(classInput, constantPool).replace('/', '.');
         if(className.equals("java.lang.Object")) {
@@ -86,16 +85,40 @@ public class ClassFileBinaryParser {
         }
 
         final String superclassName = readRefString(classInput, constantPool).replace('/', '.');
-        final ClassInfoBuilder infoUnlinked = new ClassInfoBuilder(className, isInterface, isAnnotation, interMap);
-        infoUnlinked.addSuperclass(superclassName);
+        final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, isInterface, isAnnotation, interMap);
+        infoBuilder.addSuperclass(superclassName);
 
         //Interfaces
         final int interfaceCount = classInput.readUnsignedShort();
         for(int i = 0; i < interfaceCount; i++) {
-            infoUnlinked.addImplementedInterface(readRefString(classInput, constantPool).replace('/', '.'));
+            infoBuilder.addImplementedInterface(readRefString(classInput, constantPool).replace('/', '.'));
         }
 
-        //Fields -- on parse the base info and annotations
+        parseFields(classInput, constantPool, infoBuilder);
+        parseMethods(classInput, constantPool, infoBuilder);
+
+
+        //Attribute (including class annotations)
+        final int attributesCount = classInput.readUnsignedShort();
+        for(int i = 0; i < attributesCount; i++) {
+            final String attributeName = readRefString(classInput, constantPool);
+            final int attributeLength = classInput.readInt();
+            if("RuntimeVisibleAnnotations".equals(attributeName)) {
+                final int annotationCount = classInput.readUnsignedShort();
+                for(int j = 0; j < annotationCount; j++) {
+                    final String annotationName = readAnnotation(classInput, constantPool);
+                    infoBuilder.addAnnotation(annotationName);
+                }
+            } else {
+                classInput.skipBytes(attributeLength);
+            }
+        }
+
+        return infoBuilder;
+    }
+
+    private void parseFields(DataInputStream classInput, Object[] constantPool, ClassInfoBuilder infoBuilder) throws IOException {
+        //Fields
         final int fieldCount = classInput.readUnsignedShort();
         for(int i = 0; i < fieldCount; i++) {
             final int accessFlags = classInput.readUnsignedShort();
@@ -111,17 +134,19 @@ public class ClassFileBinaryParser {
                     final int annotationCount = classInput.readUnsignedShort();
                     for(int k = 0; k < annotationCount; k++) {
                         final String annotationName = readAnnotation(classInput, constantPool);
-                        infoUnlinked.addFieldAnnotation(annotationName);
+                        infoBuilder.addFieldAnnotation(annotationName);
                         fieldAnnotationNames.add(annotationName);
                     }
                 } else {
                     classInput.skipBytes(attributeLength);
                 }
             }
-            infoUnlinked.addFieldInfo(new FieldInfo(className, fieldName, accessFlags, descriptor, fieldAnnotationNames));
+            infoBuilder.addFieldInfo(new FieldInfo(infoBuilder.getClassName(), fieldName, accessFlags, descriptor, fieldAnnotationNames));
         }
+    }
 
-
+    private void parseMethods(DataInputStream classInput, Object[] constantPool, ClassInfoBuilder infoBuilder) throws IOException {
+        //Methods
         final int methodCount = classInput.readUnsignedShort();
         for(int i = 0; i < methodCount; i++) {
             final int accessFlags = classInput.readUnsignedShort();
@@ -137,7 +162,7 @@ public class ClassFileBinaryParser {
                     final int annotationCount = classInput.readUnsignedShort();
                     for(int k = 0; k < annotationCount; k++) {
                         final String annotationName = readAnnotation(classInput, constantPool);
-                        infoUnlinked.addMethodAnnotation(annotationName);
+                        infoBuilder.addMethodAnnotation(annotationName);
                         methodAnnotationNames.add(annotationName);
                     }
                 } else {
@@ -146,27 +171,10 @@ public class ClassFileBinaryParser {
             }
 
             final boolean isConstructor = "<init>".equals(methodName);
-            infoUnlinked.addMethodInfo(new MethodInfo(className, isConstructor ? className : methodName,
+            final String className = infoBuilder.getClassName();
+            infoBuilder.addMethodInfo(new MethodInfo(className, isConstructor ? className : methodName,
                     accessFlags, descriptor, methodAnnotationNames, isConstructor));
         }
-
-        //Attribute (including class annotations)
-        final int attributesCount = classInput.readUnsignedShort();
-        for(int i = 0; i < attributesCount; i++) {
-            final String attributeName = readRefString(classInput, constantPool);
-            final int attributeLength = classInput.readInt();
-            if("RuntimeVisibleAnnotations".equals(attributeName)) {
-                final int annotationCount = classInput.readUnsignedShort();
-                for(int j = 0; j < annotationCount; j++) {
-                    final String annotationName = readAnnotation(classInput, constantPool);
-                    infoUnlinked.addAnnotation(annotationName);
-                }
-            } else {
-                classInput.skipBytes(attributeLength);
-            }
-        }
-
-        return infoUnlinked;
     }
 
     private String readAnnotation(final DataInputStream input, final Object[] constantPool) throws IOException {
@@ -192,7 +200,7 @@ public class ClassFileBinaryParser {
     }
 
     /**
-     * just skip the annotationElementValue now, It doesn't matter during the scan
+     * todo try to parse AnnotationElementValue
      * */
     private void readAnnotationElementValue(final DataInputStream input, final Object[] constantPool)
             throws IOException {
@@ -225,7 +233,12 @@ public class ClassFileBinaryParser {
 
     private String readRefString(final DataInputStream input, final Object[] constantPool)
             throws IOException {
-        return (String) constantPool[input.readUnsignedShort()];
+        final int index = input.readUnsignedShort();
+        if(constantPool[index] instanceof Integer) {//indirect reference, like CONSTANT_Class,CONSTANT_String
+            return (String) constantPool[(int)constantPool[index]];
+        } else {
+            return (String) constantPool[index];
+        }
     }
 
     public ClassFileBinaryParser() {}

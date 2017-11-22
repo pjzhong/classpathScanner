@@ -54,8 +54,8 @@ public class FastClassPathScanner {
         return executorService.submit(new Scanner(executorService, numberThread, specification, handler));
     }
 
-    public <T> FastClassPathScanner matchClassesSubclassOf(final Class<T> superClass,
-                                           final SubclassMatchProcessor<T> processor) {
+    public <T> FastClassPathScanner matchSubClassOf(final Class<T> superClass,
+                                                    final SubclassMatchProcessor<T> processor) {
         addClassMatcher(g -> {
             for(ClassInfo subClassing : g.getInfoOfClassSubClassOf(superClass)) {
                 try {

@@ -58,17 +58,6 @@ public class ClassGraph {
         return (info == null) ? Collections.EMPTY_LIST : new ArrayList<>(info.getClassesWithAnnotation());
     }
 
-    private List<String> getNameOnfClassInfos(Collection<? extends ClassInfo> infos) {
-        if(infos == null) { return Collections.EMPTY_LIST; }
-
-        List<String> classNames = new ArrayList<>(infos.size());
-        for(ClassInfo info : infos) {
-            classNames.add(info.getClassName());
-        }
-
-        return classNames;
-    }
-
     private Set<ClassInfo> filterClassInfo(Set<ClassInfo> infoSet, ClassType ... classTypes) {
         if(infoSet == null) { return Collections.EMPTY_SET; }
 
@@ -107,15 +96,17 @@ public class ClassGraph {
         return infoAfterFiltered;
     }
 
-    public ClassGraph(ScanSpecification specification, Map<String, ClassInfo> infoMap) {
+    public static ClassGraphBuilder builder(ScanSpecification specification, Collection<ClassInfoBuilder> builders) {
+        return new ClassGraphBuilder(specification, builders);
+    }
+
+    ClassGraph(ScanSpecification specification, Map<String, ClassInfo> infoMap) {
         this.specification = specification;
         this.classNameToInfo = infoMap;
-        this.allClassInfo = new HashSet<>(infoMap.values());
     }
 
     final Map<String, ClassInfo> classNameToInfo;
     private final ScanSpecification specification;
-    private final Set<ClassInfo> allClassInfo;
     private enum ClassType {
         ALL,
         STANDARD_CLASS,
