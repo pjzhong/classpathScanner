@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ClassInfoBuilder {
 
-    ClassInfo addScannedClass(final String className, boolean isInterface, boolean isAnnotation) {
+    ClassInfo addScannedClass(final String className) {
         ClassInfo classInfo;
         if(infoMap.containsKey(className)) {
             classInfo = infoMap.get(className);
@@ -20,8 +20,8 @@ public class ClassInfoBuilder {
         }
 
         classInfo.classFileScanned = true;
-        classInfo.isInterface |= isInterface;
-        classInfo.isAnnotation |= isAnnotation;
+        classInfo.isInterface |= isInterface();
+        classInfo.isAnnotation |= isAnnotation();
         return classInfo;
     }
 
@@ -39,7 +39,7 @@ public class ClassInfoBuilder {
     * */
     void build(Map<String, ClassInfo> infoMap) {
         this.infoMap = infoMap;
-        final ClassInfo classInfo = addScannedClass(className, isInterface, isAnnotation);
+        final ClassInfo classInfo = addScannedClass(className);
 
         if(StringUtils.notEmpty(superclassName)) {
             classInfo.addSuperclass(superclassName, this);
@@ -129,28 +129,27 @@ public class ClassInfoBuilder {
     }
 
     public boolean isInterface() {
-        return isInterface;
+        return !isAnnotation() && ((accessFlag & 0x0200) != 0);
     }
 
     public boolean isAnnotation() {
-        return isAnnotation;
+        return (accessFlag & 0x2000) != 0;
     }
 
     public String getSuperclassName() {
         return superclassName;
     }
 
-    ClassInfoBuilder(final String className, final boolean isInterface, final boolean isAnnotation,
+    ClassInfoBuilder(final String className, final int accessFlag,
                      final ConcurrentMap<String, String> stringInternMap) {
         this.stringInternMap = stringInternMap;
         this.className = intern(className);
-        this.isInterface = isInterface;
-        this.isAnnotation = isAnnotation;
+        this.accessFlag = accessFlag;
     }
 
     private final String className;
-    private final boolean isInterface;
-    private final boolean isAnnotation;
+
+    private final int accessFlag;
     // Superclass (can be null if no superclass, or if superclass is blacklisted)
     private String superclassName;
     private List<String> implementedInterfaces;
