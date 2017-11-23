@@ -1,9 +1,6 @@
 package com.zjp.scanner;
 
-import com.zjp.beans.ClassInfo;
-import com.zjp.beans.ClassInfoBuilder;
-import com.zjp.beans.FieldInfo;
-import com.zjp.beans.MethodInfo;
+import com.zjp.beans.*;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -97,7 +94,6 @@ public class ClassFileBinaryParser {
         parseFields(classInput, constantPool, infoBuilder);
         parseMethods(classInput, constantPool, infoBuilder);
 
-
         //Attribute (including class annotations)
         final int attributesCount = classInput.readUnsignedShort();
         for(int i = 0; i < attributesCount; i++) {
@@ -125,23 +121,32 @@ public class ClassFileBinaryParser {
             final String fieldName = readRefString(classInput, constantPool);
             final  String descriptor = readRefString(classInput, constantPool);
 
+            FieldInfoBuilder fieldBuilder = FieldInfo.builder(infoBuilder.getClassName(), fieldName, descriptor, accessFlags);
+
             final int attributeCount = classInput.readUnsignedShort();
-            List<String> fieldAnnotationNames = new ArrayList<>(1);
             for(int j = 0; j < attributeCount; j++) {
                 final String attributeName = readRefString(classInput, constantPool);
                 final int attributeLength = classInput.readInt();
-                if(attributeName.equals("RuntimeVisibleAnnotations")) {
-                    final int annotationCount = classInput.readUnsignedShort();
-                    for(int k = 0; k < annotationCount; k++) {
-                        final String annotationName = readAnnotation(classInput, constantPool);
-                        infoBuilder.addFieldAnnotation(annotationName);
-                        fieldAnnotationNames.add(annotationName);
-                    }
-                } else {
-                    classInput.skipBytes(attributeLength);
+                switch (attributeName) {
+                    case "RuntimeVisibleAnnotations":{
+                        final int annotationCount = classInput.readUnsignedShort();
+                        for(int k = 0; k < annotationCount; k++) {
+                            final String annotationName = readAnnotation(classInput, constantPool);
+                            infoBuilder.addFieldAnnotation(annotationName);
+                            fieldBuilder.addAnnotationNames(annotationName);
+                        }
+                    } break;
+                    case "ConstantValue": {
+                        Object constantValue = descriptor.equals("Ljava/lang/String;") ?// only String is indirect references
+                                readRefString(classInput, constantPool) :
+                                constantPool[classInput.readUnsignedShort()];
+                        fieldBuilder.setConstantValue(constantValue);
+                    } break;
+                    default:classInput.skipBytes(attributeLength);break;
                 }
             }
-            infoBuilder.addFieldInfo(new FieldInfo(infoBuilder.getClassName(), fieldName, accessFlags, descriptor, fieldAnnotationNames));
+
+            infoBuilder.addFieldInfo(fieldBuilder.build());
         }
     }
 

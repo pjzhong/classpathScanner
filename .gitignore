@@ -1,0 +1,31 @@
+# JAVA #
+*.class
+
+# Maven #
+target
+
+# IDEA #
+.idea
+*.iml
+.metadata
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+.cache*
+
+
+# Eclipse #
+.settings
+.classpath
+.project
+.externalToolBuilders
+
+# SVN #
+.svn
+
+# image #
+*.png
+*.jpg
+*.jpeg
+*.gif
