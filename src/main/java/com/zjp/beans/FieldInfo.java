@@ -115,6 +115,10 @@ public class FieldInfo {
         buf.append(' ');
         buf.append(fieldName);
 
+        if(getConstantValue() != null) {
+            buf.append(" = ").append(constantValue).append(';');
+        }
+
         return buf.toString();
     }
 

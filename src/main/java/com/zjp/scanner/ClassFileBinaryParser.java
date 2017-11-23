@@ -137,9 +137,26 @@ public class ClassFileBinaryParser {
                         }
                     } break;
                     case "ConstantValue": {
-                        Object constantValue = descriptor.equals("Ljava/lang/String;") ?// only String is indirect references
-                                readRefString(classInput, constantPool) :
-                                constantPool[classInput.readUnsignedShort()];
+                        final int valueIndex = classInput.readUnsignedShort();
+                        Object constantValue;
+                        final char firstChar = descriptor.charAt(0);
+                        switch (firstChar) {
+                            case 'B':constantValue = ((Integer)constantPool[valueIndex]).byteValue();break;
+                            case 'C':constantValue = ((char)((Integer)constantPool[valueIndex]).intValue());break;
+                            case 'S':constantValue = ((Integer)constantPool[valueIndex]).shortValue();break;
+                            case 'Z':constantValue =  ((Integer)constantPool[valueIndex]) != 0;break;
+                            case 'I':
+                            case 'J':
+                            case 'F'://Integer, Long, Float, Double already in correct type
+                            case 'D':constantValue = constantPool[valueIndex];break;
+                            default: {
+                                if(descriptor.equals("Ljava/lang/String;")) {
+                                    constantValue = constantPool[(int)constantPool[valueIndex]];
+                                } else {
+                                    throw new RuntimeException("unknown Constant type:" + descriptor);
+                                }
+                            } break;
+                        }
                         fieldBuilder.setConstantValue(constantValue);
                     } break;
                     default:classInput.skipBytes(attributeLength);break;

@@ -16,6 +16,10 @@ public class TestController {
     private static final float fl = 123.0f;
     private static final char qwe = 'a';
     private static final byte aaa = 1;
+    private static final Integer integer = 123;
+    private static final boolean IamTrue = true;
+    private static final Boolean IamFalse = false;
+
 
     @AutoWired
     TestComponent component;
