@@ -60,20 +60,9 @@ public class ClassFileBinaryParser {
         }
 
         //Access flags
-        final int flags = classInput.readUnsignedShort();
-        final boolean isInterface = (flags & 0x0200) != 0;
-        final boolean isAnnotation = (flags & 0x2000) != 0;
-        final boolean isSynthetic= (flags & 0x1000) != 0;
-
+        final int accFlag = classInput.readUnsignedShort();
+        final boolean isSynthetic= (accFlag & 0x1000) != 0;
         if(isSynthetic) { return null; }//do not scanned class file generate by compiler
-
-        //Resolve indirection of string references now that all the strings have been
-        // read (allows forward references to string before they have have been encountered)
-/*        for(int i = 1; i < constantCount; i++) {
-            if(indirectStringRef[i] >= 0) {
-                constantPool[i] = constantPool[indirectStringRef[i]];
-            }
-        }*/
 
         final String className = readRefString(classInput, constantPool).replace('/', '.');
         if(className.equals("java.lang.Object")) {
@@ -82,7 +71,7 @@ public class ClassFileBinaryParser {
         }
 
         final String superclassName = readRefString(classInput, constantPool).replace('/', '.');
-        final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, isInterface, isAnnotation, interMap);
+        final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, accFlag, interMap);
         infoBuilder.addSuperclass(superclassName);
 
         //Interfaces

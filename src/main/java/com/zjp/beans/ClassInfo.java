@@ -185,9 +185,8 @@ public class ClassInfo implements Comparable<ClassInfo> {
         this.className = className;
     }
 
-    public static ClassInfoBuilder builder(String className, boolean isInterface, boolean isAnnotation,
-                                           ConcurrentMap<String, String> internMap) {
-        return new ClassInfoBuilder(className, isInterface, isAnnotation, internMap);
+    public static ClassInfoBuilder builder(String className, int accessFlag, ConcurrentMap<String, String> internMap) {
+        return new ClassInfoBuilder(className, accessFlag, internMap);
     }
 
     @Override
