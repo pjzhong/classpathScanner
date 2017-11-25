@@ -80,21 +80,25 @@ public class Scanner implements Callable<ClassGraph>{
             }
         }
 
+
         /**
-         * start to parse the class files found in the runtime context
+         * restore the classpathOrder and filtered the same classes but in difference jar file
          * */
-        List<ClasspathElement> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
+        List<ClasspathElement<?>> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
         Set<String> encounteredClassFile = new HashSet<>();
         for(ClasspathElement element : classpathOrder) {
             element.maskFiles(encounteredClassFile);
         }
 
+        /**
+         * start to parse the class files found in the runtime context
+         * */
         final ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders = new ConcurrentLinkedQueue<>();
         final ConcurrentMap<String, String> stringInternMap = new ConcurrentHashMap<>();
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
         WorkQueue<ClasspathElement<?>> workQueue = null;
         try {
-            workQueue = new WorkQueue<>(elementMap.values(),
+            workQueue = new WorkQueue<>(classpathOrder,
                     e -> e.parseClassFiles(parser, stringInternMap, infoBuilders), interruptionChecker);
             workQueue.startWorker(executorService, workers - 1 /* in case there only one thread*/);
             workQueue.runWorkLoop();
@@ -114,10 +118,10 @@ public class Scanner implements Callable<ClassGraph>{
     /**
      * restore the classPath after scanned;
      * */
-    private List<ClasspathElement> restoredClasspathOrder(List<ClassRelativePath> rawPaths,
+    private List<ClasspathElement<?>> restoredClasspathOrder(List<ClassRelativePath> rawPaths,
                                                           ClassRelativePathToElementMap elementMap)
             throws InterruptedException {
-        final List<ClasspathElement> order = new ArrayList<>();
+        final List<ClasspathElement<?>> order = new ArrayList<>();
         for(ClassRelativePath relativePath : rawPaths) {
             ClasspathElement element = elementMap.get(relativePath);
             if(element != null) { order.add(elementMap.get(relativePath)); }
