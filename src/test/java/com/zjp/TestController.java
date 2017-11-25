@@ -24,4 +24,8 @@ public class TestController {
     public void index2() {
     }
 
+    public boolean index3() {
+        return false;
+    }
+
 }
