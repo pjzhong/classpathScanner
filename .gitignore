@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 # JAVA #
 *.class
-
-# Maven #
-target
+*.jar
 
 # IDEA #
 .idea
@@ -30,17 +27,7 @@ target
 *.jpg
 *.jpeg
 *.gif
-=======
+
 # Maven #
 target/
 */target/
-
-# IDEA #
-.idea/
-*.iml
-
-# Eclipse #
-.settings/
-.classpath
-.project
->>>>>>> 2b807e8cb11dcff2b51ad720ddd8e340f97d70cc
