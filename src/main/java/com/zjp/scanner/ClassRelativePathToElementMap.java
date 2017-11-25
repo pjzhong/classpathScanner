@@ -7,9 +7,11 @@ import com.zjp.utils.SingleTonMap;
 
 /**
  * Created by Administrator on 11/5/2017.
+ * Just my personal opinion, this class has some overDesign, it make the reader confuse what this class for in the
+ * first time read this code , like me.
+ * todo find a better way to replace this class
  */
-class ClassRelativePathToElementMap
-        extends SingleTonMap<ClassRelativePath, ClasspathElement<?>>  implements AutoCloseable {
+class ClassRelativePathToElementMap extends SingleTonMap<ClassRelativePath, ClasspathElement<?>>  implements AutoCloseable {
 
     @Override
     protected ClasspathElement newInstance(ClassRelativePath relativePath) {

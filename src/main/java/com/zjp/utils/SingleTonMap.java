@@ -48,6 +48,10 @@ public abstract class SingleTonMap<K, V> {
 
     protected abstract V newInstance(K key);
 
+    /**
+     * dig into how ConcurrentHashMap.putIfAbsent() work , to figure out
+     * why author need create this SignletoHolder
+     * */
     private static class SingletonHolder<V> {
         private V singleton;
         private final CountDownLatch initialized = new CountDownLatch(1);

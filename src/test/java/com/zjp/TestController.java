@@ -38,4 +38,8 @@ public class TestController {
     public void index2(String test, int b, List<String> list) {
     }
 
+    public boolean index3() {
+        return false;
+    }
+
 }

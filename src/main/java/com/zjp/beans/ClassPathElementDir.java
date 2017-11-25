@@ -76,7 +76,7 @@ public class ClassPathElementDir extends ClasspathElement<File> {
             } else if(file.isFile() && matchStatus == ScanPathMatch.WITHIN_WHITE_LISTED_PATH){
                 String fileRelativePath = dirRelatePath + file.getName();
                 if(ClassRelativePath.isClassFile(fileRelativePath)) {
-                    classFileMatches.add(file);
+                    classFileMatches.add(new ClassResource(file, fileRelativePath));
                 }
             }
         }

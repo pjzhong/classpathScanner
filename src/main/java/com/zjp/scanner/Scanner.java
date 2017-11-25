@@ -11,10 +11,7 @@ import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -86,6 +83,12 @@ public class Scanner implements Callable<ClassGraph>{
         /**
          * start to parse the class files found in the runtime context
          * */
+        List<ClasspathElement> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
+        Set<String> encounteredClassFile = new HashSet<>();
+        for(ClasspathElement element : classpathOrder) {
+            element.maskFiles(encounteredClassFile);
+        }
+
         final ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders = new ConcurrentLinkedQueue<>();
         final ConcurrentMap<String, String> stringInternMap = new ConcurrentHashMap<>();
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
@@ -106,5 +109,19 @@ public class Scanner implements Callable<ClassGraph>{
          * */
         ClassGraph classGraph = ClassGraph.builder(specification, infoBuilders).build();
         return classGraph;
+    }
+
+    /**
+     * restore the classPath after scanned;
+     * */
+    private List<ClasspathElement> restoredClasspathOrder(List<ClassRelativePath> rawPaths,
+                                                          ClassRelativePathToElementMap elementMap)
+            throws InterruptedException {
+        final List<ClasspathElement> order = new ArrayList<>();
+        for(ClassRelativePath relativePath : rawPaths) {
+            ClasspathElement element = elementMap.get(relativePath);
+            if(element != null) { order.add(elementMap.get(relativePath)); }
+        }
+        return order;
     }
 }
