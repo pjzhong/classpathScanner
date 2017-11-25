@@ -1,8 +1,10 @@
 import com.zjp.FastClassPathScanner;
 
+import com.zjp.beans.MethodInfo;
 import org.junit.Test;
 
-import java.util.Map;
+import java.lang.reflect.Method;
+
 
 public class ClassInDefaultPackage {
 
@@ -23,5 +25,25 @@ public class ClassInDefaultPackage {
 
         int index = some_object.hashCode() & ( hashMap.size() - 1);*/
         System.out.println(Integer.MAX_VALUE);
+
+        FastClassPathScanner scanner = new FastClassPathScanner("com.example")
+                .matchClassesWithMethodAnnotation(Deprecated.class, (info, c) -> {
+                    System.out.println("----" + c + "------");
+                    try {
+                        Object ob  = c.newInstance();
+                        for(Method method : ob.getClass().getMethods()) {
+                           if(method.getDeclaringClass().equals(ob.getClass())) {
+                               System.out.println(method);
+                           }
+                        }
+                        System.out.println("\n-----------ClassInfo---------------");
+                        for(MethodInfo methodInfo : info.getMethodInfoList()) {
+                            System.out.println(methodInfo);
+                        }
+                    } catch (Exception e) {
+
+                    }
+                });
+        scanner.scan();
     }
 }

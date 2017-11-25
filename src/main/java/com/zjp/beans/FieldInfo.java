@@ -12,27 +12,6 @@ import java.util.List;
  */
 @Immutable
 public class FieldInfo {
-
-    private final String belongToClass;
-    private final String fieldName;
-    private final int modifiers;
-    private final String typeStr;
-    private final List<String> annotationNames;
-
-    public FieldInfo(String className, final String fieldName, final int modifiers, final String typeDescriptor, final List<String> annotationNames) {
-        this.belongToClass = className;
-        this.fieldName = fieldName;
-        this.modifiers = modifiers;
-
-        final List<String> typeNames = ReflectionUtils.parseTypeDescriptor(typeDescriptor);
-        if (typeNames.size() != 1) {
-            throw new IllegalArgumentException("Invalid type descriptor for field: " + typeDescriptor);
-        }
-        this.typeStr = typeNames.get(0);
-
-        this.annotationNames = annotationNames.isEmpty() ? Collections.<String> emptyList() : annotationNames;
-    }
-
     /** Get the field modifiers as a string, e.g. "public static final". */
     public String getModifiers() {
         return ReflectionUtils.modifiersToString(modifiers, /* isMethod = */ false);
@@ -88,8 +67,15 @@ public class FieldInfo {
         return typeStr;
     }
 
+    /**maybe be null, if this field not modified by static and final or it isn't primitive type*/
+    public Object getConstantValue() {
+        return constantValue;
+    }
+
     /** Returns the names of annotations on the field, or the empty list if none. */
-    public List<String> getAnnotationNames() { return Collections.unmodifiableList(annotationNames); }
+    public List<String> getAnnotationNames() {
+        return annotationNames == null ? Collections.EMPTY_LIST : Collections.unmodifiableList(annotationNames);
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -115,10 +101,8 @@ public class FieldInfo {
     public String toString() {
         final StringBuilder buf = new StringBuilder();
 
-        if (!annotationNames.isEmpty()) {
-            for (final String annotationName : annotationNames) {
-                buf.append("@").append(annotationName).append("\n");
-            }
+        for (final String annotationName : getAnnotationNames()) {
+            buf.append("@").append(annotationName).append("\n");
         }
 
         buf.append(getModifiers());
@@ -131,6 +115,42 @@ public class FieldInfo {
         buf.append(' ');
         buf.append(fieldName);
 
+        if(getConstantValue() != null) {
+            buf.append(" = ").append(constantValue).append(';');
+        }
+
         return buf.toString();
     }
+
+    public static FieldInfoBuilder builder(String className, String fieldName, String typeDescriptor, int modifiers) {
+        return new FieldInfoBuilder(className, fieldName, typeDescriptor, modifiers);
+    }
+
+    FieldInfo(String className, String fieldName, String typeDescriptor, int modifiers) {
+        this.belongToClass = className;
+        this.fieldName = fieldName;
+        this.modifiers = modifiers;
+
+        final List<String> typeNames = ReflectionUtils.parseTypeDescriptor(typeDescriptor);
+        if (typeNames.size() != 1) {
+            throw new IllegalArgumentException("Invalid type descriptor for field: " + typeDescriptor);
+        }
+        this.typeStr = typeNames.get(0);
+    }
+
+    void setAnnotationNames(List<String> annotationNames) {
+        this.annotationNames = annotationNames;
+    }
+
+    void setConstantValue(Object constantValue) {
+        this.constantValue = constantValue;
+    }
+
+    private final String belongToClass;
+    private final String fieldName;
+    private final int modifiers;
+    private final String typeStr;
+
+    private  Object constantValue = null;
+    private  List<String> annotationNames;
 }

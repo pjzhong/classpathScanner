@@ -14,8 +14,9 @@ public class BinaryParserTest {
     @Test
     public void parseRuntimeVisibleAnnotation() throws Exception {
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
+        System.err.println();
 
-        parser.readClassInfoFromClassFileHeader(new FileInputStream(new File("E:\\Fast-ClassPath-Scanner-zjp\\target\\test-classes\\com\\zjp\\TestController.class")),
+        parser.readClassInfoFromClassFileHeader(new FileInputStream(new File("D:\\faisco\\fast-classpath-scanner-zjp\\target\\test-classes\\com\\zjp\\TestController.class")),
                 new ConcurrentHashMap<>());
     }
 }

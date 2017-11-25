@@ -1,3 +1,36 @@
+<<<<<<< HEAD
+# JAVA #
+*.class
+
+# Maven #
+target
+
+# IDEA #
+.idea
+*.iml
+.metadata
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+.cache*
+
+
+# Eclipse #
+.settings
+.classpath
+.project
+.externalToolBuilders
+
+# SVN #
+.svn
+
+# image #
+*.png
+*.jpg
+*.jpeg
+*.gif
+=======
 # Maven #
 target/
 */target/
@@ -10,3 +43,4 @@ target/
 .settings/
 .classpath
 .project
+>>>>>>> 2b807e8cb11dcff2b51ad720ddd8e340f97d70cc

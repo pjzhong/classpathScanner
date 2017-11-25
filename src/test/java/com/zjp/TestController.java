@@ -10,6 +10,17 @@ import com.zjp.sterotype.RequestMapping;
 @Controller
 public class TestController {
 
+    private static int num = 1;
+    private static final String str = "12312312";
+    private static long log = 1231231231L;
+    private static final float fl = 123.0f;
+    private static final char qwe = 'a';
+    private static final byte aaa = 1;
+    private static final Integer integer = 123;
+    private static final boolean IamTrue = true;
+    private static final Boolean IamFalse = false;
+
+
     @AutoWired
     TestComponent component;
 
