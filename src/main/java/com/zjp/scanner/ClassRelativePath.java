@@ -23,7 +23,7 @@ public class ClassRelativePath {
                 if(!ClassScanUtils.isJar(getCanonicalPath())) {
                     return false;//ignore non-jar file on class path
                 }
-                ScanPathMatch matchStatus = spec.pathWhiteListMatchStatus(path);
+                ScanPathMatch matchStatus = spec.blockJdk(path);
                 switch (matchStatus) {
                     case WITHIN_BLACK_LISTED_PATH:return false;
                 }
