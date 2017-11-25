@@ -4,6 +4,9 @@ import com.zjp.sterotype.AutoWired;
 import com.zjp.sterotype.Controller;
 import com.zjp.sterotype.RequestMapping;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Created by Administrator on 10/14/2017.
  */
@@ -28,11 +31,11 @@ public class TestController {
     }
 
     @RequestMapping({"/index", "/hello"})
-    public void index() {
+    public void index(Map<String, Integer> integerMap) {
     }
 
     @RequestMapping()
-    public void index2() {
+    public void index2(String test, int b, List<String> list) {
     }
 
     public boolean index3() {

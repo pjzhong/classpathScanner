@@ -34,6 +34,16 @@ public class ScanSpecification {
         return ScanPathMatch.NOT_WITHIN_WHITE_LISTED_PATH;
     }
 
+    public ScanPathMatch blockJdk(final String relativePath) {
+        for(String jrePath : jrePaths) {
+            if(relativePath.startsWith(jrePath)) {
+                return ScanPathMatch.WITHIN_BLACK_LISTED_PATH;
+            }
+        }
+
+        return ScanPathMatch.NOT_WITHIN_WHITE_LISTED_PATH;
+    }
+
     public ScanSpecification(final String... specifications) {
         final Set<String> uniqueWhiteListPathPrefixes = new HashSet<>();
         final Set<String> uniqueBlackListedPathPrefixes = new HashSet<>();
@@ -57,19 +67,19 @@ public class ScanSpecification {
             uniqueBlackListedPathPrefixes.add("java/");
             uniqueBlackListedPathPrefixes.add("javax/");
             uniqueBlackListedPathPrefixes.add("sun/");
-
-            //JRE_PATH_DIRS
-            uniqueBlackListedPathPrefixes.addAll(getJrePath());
         }
         blackListPathPrefixes.addAll(uniqueBlackListedPathPrefixes);
         blackListPathPrefixes.forEach( s -> blackListPackagePrefixes.add(s.replace('/', '.')) );
+
+        //block jrePath
+        jrePaths = getJrePaths();
 
         //process whiteListed
         uniqueWhiteListPathPrefixes.removeAll(uniqueBlackListedPathPrefixes);
         whiteListPathPrefixes.addAll(uniqueWhiteListPathPrefixes);
     }
 
-    private Set<String> getJrePath() {
+    private Set<String> getJrePaths() {
         Set<File> jrePathFile = new HashSet<>();
         String javaHome = System.getProperty("java.home");
         if(StringUtils.notEmpty(javaHome)) {
@@ -125,6 +135,7 @@ public class ScanSpecification {
     private List<String> whiteListPathPrefixes = new ArrayList<>();
     private List<String> blackListPathPrefixes = new ArrayList<>();
     private List<String> blackListPackagePrefixes = new ArrayList<>();
+    private Set<String> jrePaths;
 
     private boolean scanFiles = true;
     private boolean blackSystemPackages = true;

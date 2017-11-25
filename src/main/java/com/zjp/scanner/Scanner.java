@@ -34,22 +34,30 @@ public class Scanner implements Callable<ClassGraph>{
 
     @Override
     public ClassGraph call() throws Exception {
-         String currDirPathStr = "";
-         try {
-             Path currDirPath = Paths.get("").toAbsolutePath();
-             currDirPath = currDirPath.normalize();
-             currDirPath = currDirPath.toRealPath(LinkOption.NOFOLLOW_LINKS);
-             currDirPathStr = FastPathResolver.resolve(currDirPath.toString());
-         } catch (IOException e) {
-             throw new RuntimeException("Could not resolve current directory: " + currDirPathStr, e);
-         }
+        String currDirPathStr = "";
+        try {
+            Path currDirPath = Paths.get("").toAbsolutePath();
+            currDirPath = currDirPath.normalize();
+            currDirPath = currDirPath.toRealPath(LinkOption.NOFOLLOW_LINKS);
+            currDirPathStr = FastPathResolver.resolve(currDirPath.toString());
+        } catch (IOException e) {
+            throw new RuntimeException("Could not resolve current directory: " + currDirPathStr, e);
+        }
 
-         final List<String> classPathElementStrings = new ClasspathFinder().getRawClassPathStrings();
-         final List<ClassRelativePath> rawClassPathElements = new ArrayList<>();
-         for(String classElementStr : classPathElementStrings) {
-             rawClassPathElements.add(new ClassRelativePath(currDirPathStr, classElementStr));
-         }
+        /**
+         * Get all classpathElements from the runtime-context, have no idea what these is ?
+         * Write a class, and run the code below:
+         *      System.getProperty("java.class.path");
+         * */
+        final List<String> classPathElementStrings = new ClasspathFinder().getRawClassPathStrings();
+        final List<ClassRelativePath> rawClassPathElements = new ArrayList<>();
+        for(String classElementStr : classPathElementStrings) {
+            rawClassPathElements.add(new ClassRelativePath(currDirPathStr, classElementStr));
+        }
 
+        /**
+         * split dir and jar file and started to scan them
+         * */
         final ClassRelativePathToElementMap elementMap = new ClassRelativePathToElementMap(specification, interruptionChecker);
         WorkQueue<ClassRelativePath> relativePathQueue = null;
         try {
@@ -72,18 +80,25 @@ public class Scanner implements Callable<ClassGraph>{
             }
         }
 
-        List<ClasspathElement> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
+
+        /**
+         * restore the classpathOrder and filtered the same classes but in difference jar file
+         * */
+        List<ClasspathElement<?>> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
         Set<String> encounteredClassFile = new HashSet<>();
         for(ClasspathElement element : classpathOrder) {
             element.maskFiles(encounteredClassFile);
         }
 
+        /**
+         * start to parse the class files found in the runtime context
+         * */
         final ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders = new ConcurrentLinkedQueue<>();
         final ConcurrentMap<String, String> stringInternMap = new ConcurrentHashMap<>();
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
         WorkQueue<ClasspathElement<?>> workQueue = null;
         try {
-            workQueue = new WorkQueue<>(elementMap.values(),
+            workQueue = new WorkQueue<>(classpathOrder,
                     e -> e.parseClassFiles(parser, stringInternMap, infoBuilders), interruptionChecker);
             workQueue.startWorker(executorService, workers - 1 /* in case there only one thread*/);
             workQueue.runWorkLoop();
@@ -93,6 +108,9 @@ public class Scanner implements Callable<ClassGraph>{
             }
         }
 
+        /**
+         * build the classGraph in single-thread
+         * */
         ClassGraph classGraph = ClassGraph.builder(specification, infoBuilders).build();
         return classGraph;
     }
@@ -100,10 +118,10 @@ public class Scanner implements Callable<ClassGraph>{
     /**
      * restore the classPath after scanned;
      * */
-    private List<ClasspathElement> restoredClasspathOrder(List<ClassRelativePath> rawPaths,
+    private List<ClasspathElement<?>> restoredClasspathOrder(List<ClassRelativePath> rawPaths,
                                                           ClassRelativePathToElementMap elementMap)
             throws InterruptedException {
-        final List<ClasspathElement> order = new ArrayList<>();
+        final List<ClasspathElement<?>> order = new ArrayList<>();
         for(ClassRelativePath relativePath : rawPaths) {
             ClasspathElement element = elementMap.get(relativePath);
             if(element != null) { order.add(elementMap.get(relativePath)); }
