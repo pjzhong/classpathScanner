@@ -75,7 +75,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
                 case NOT_WITHIN_WHITE_LISTED_PATH:continue;
                 case WITHIN_WHITE_LISTED_PATH: {
                     if(ClassRelativePath.isClassFile(relativePath)) {
-                        classFileMatches.add(zipEntry);
+                        classFileMatches.add(new ClassResource<>(zipEntry, relativePath));
                     }
                 }
             }
@@ -85,13 +85,13 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
     @Override
     protected void doParseClassFile(ZipEntry zipEntry, ClassFileBinaryParser parser, ScanSpecification specification,
                                     ConcurrentMap<String, String> internMap,
-                                    ConcurrentLinkedQueue<ClassInfoBuilder> unLinkInfos)
+                                    ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders)
             throws IOException {
         if(!ioExceptionOnOpen) {
             try (InputStream stream = zipFile.getInputStream(zipEntry)){
                 ClassInfoBuilder infoUnlinked = parser.readClassInfoFromClassFileHeader(stream, internMap);
                 if(infoUnlinked != null) {
-                    unLinkInfos.add(infoUnlinked);
+                    infoBuilders.add(infoUnlinked);
                 }
             }
         }

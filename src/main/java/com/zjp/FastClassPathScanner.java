@@ -105,6 +105,24 @@ public class FastClassPathScanner {
         return this;
     }
 
+    public FastClassPathScanner matchClassesWithMethodAnnotation(final Class<?> annotation,
+                                                           final ClassAnnotationMatchProcessor processor) {
+        addClassMatcher( g -> {
+            for(ClassInfo classWithAnnotation : g.getInfoOfClassesWithMethodAnnotation(annotation)) {
+                try {
+                    Class<?> cls = loadClass(classWithAnnotation.getClassName());
+                    processor.processMatch(classWithAnnotation, cls);
+                } catch (Throwable e) {
+                    //todo log this
+                    System.out.println(e);
+                }
+            }
+        });
+        return this;
+    }
+
+
+
     private Class<?> loadClass(final String className) {
         try {
             return Class.forName(className, false, ClassLoader.getSystemClassLoader());
