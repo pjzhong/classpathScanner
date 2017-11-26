@@ -6,10 +6,7 @@ import com.zjp.scanner.InterruptionChecker;
 import com.zjp.scanner.ScanSpecification;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
@@ -24,12 +21,12 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
     public void parseClassFiles(ClassFileBinaryParser parser,
                          final ConcurrentMap<String, String> internMap,
                          final ConcurrentLinkedQueue<ClassInfoBuilder> builders) {
-        for(ClassResource<F> fileResource : classFileMatches) {
+        for(F fileResource : classFilesMap.values()) {
             try {
-                doParseClassFile(fileResource.getClassFile(), parser, scanSpecification, internMap, builders);
+                doParseClassFile(fileResource, parser, scanSpecification, internMap, builders);
                 interruptionChecker.check();
             } catch (Exception e) {
-                System.out.println("something wrong when parsing" + fileResource);
+                System.out.println("something wrong when parsing:" + fileResource + ", exception:" + e);
                 throw new RuntimeException(e);
             }
         }
@@ -37,22 +34,15 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
 
     public void maskFiles(Set<String> encounteredRelativePath) {
         final Set<String> maskedRelativePaths = new HashSet<>();
-        classFileMatches.forEach( classResource -> {
-            if(encounteredRelativePath.contains(classResource.getRelativePath())) {
-                maskedRelativePaths.add(classResource.getRelativePath());
+        classFilesMap.forEach( (relativePath, classResource) -> {
+            if(encounteredRelativePath.contains(relativePath)) {
+                maskedRelativePaths.add(relativePath);
             } else {
-                encounteredRelativePath.add(classResource.getRelativePath());
+                encounteredRelativePath.add(relativePath);
             }
         });
 
-        List<ClassResource<F>> filteredClassMatches = new ArrayList<>();
-        classFileMatches.forEach( c -> {
-            if(!maskedRelativePaths.contains(c.getRelativePath())) {
-                filteredClassMatches.add(c);
-            }
-        });
-
-        classFileMatches = filteredClassMatches;
+        maskedRelativePaths.forEach(classFilesMap::remove);
     }
 
     protected abstract void doParseClassFile(F file, ClassFileBinaryParser parser, ScanSpecification specification,
@@ -67,42 +57,8 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
         this.classRelativePath = classRelativePath;
     }
 
-    static class ClassResource<F> {
-        private final F classFile;
-        private final String relativePath;
-
-        public ClassResource(F classFile, String relativePath) {
-            this.classFile = classFile;
-            this.relativePath = relativePath;
-        }
-
-        public F getClassFile() {
-            return classFile;
-        }
-
-        public String getRelativePath() {
-            return relativePath;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            ClassResource<?> that = (ClassResource<?>) o;
-
-            return relativePath != null ? relativePath.equals(that.relativePath) : that.relativePath == null;
-
-        }
-
-        @Override
-        public int hashCode() {
-            return relativePath != null ? relativePath.hashCode() : 0;
-        }
-    }
-
     /** The list of whiteList classFiles found within this classpath resource, if scanFiles is true. */
-    protected List<ClassResource<F>> classFileMatches = new ArrayList<>();
+    protected Map<String, F> classFilesMap = new HashMap<>();//relativePath , File
     protected  final ScanSpecification scanSpecification;
 
     protected boolean ioExceptionOnOpen;

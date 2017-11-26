@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -34,7 +35,7 @@ public class ClassPathElementDir extends ClasspathElement<File> {
                 return;
             }
 
-            classFileMatches = new ArrayList<>();
+            classFilesMap = new HashMap<>();
             final Set<String> scannedCanonicalPaths = new HashSet<>();
             scanDir(classRelativePath, dir, (dir.getPath().length() + 1), scannedCanonicalPaths, 0);
         }
@@ -76,7 +77,7 @@ public class ClassPathElementDir extends ClasspathElement<File> {
             } else if(file.isFile() && matchStatus == ScanPathMatch.WITHIN_WHITE_LISTED_PATH){
                 String fileRelativePath = dirRelatePath + file.getName();
                 if(ClassRelativePath.isClassFile(fileRelativePath)) {
-                    classFileMatches.add(new ClassResource(file, fileRelativePath));
+                    classFilesMap.put(fileRelativePath, file);
                 }
             }
         }

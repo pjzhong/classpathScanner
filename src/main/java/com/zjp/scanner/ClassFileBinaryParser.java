@@ -226,9 +226,10 @@ public class ClassFileBinaryParser {
             case 'S':
             case 'Z':
             case 's':
+            case 'c':
                 //constant_value_index
                 input.skipBytes(2);break;
-            case 'e'://class_info_index
+            case 'e'://enum_constant_index
                 input.skipBytes(4);break;
             case '@'://Complex(nested) annotation
                 readAnnotation(input, constantPool);break;

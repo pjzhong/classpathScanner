@@ -106,6 +106,12 @@ public class ClassRelativePath {
         return file;
     }
 
+    public ClassRelativePath(String relativePath) {
+        this.basePath = "";
+        this.relativePath = relativePath;
+        this.isJar = this.relativePath.contains("!") || ClassScanUtils.isJar(this.relativePath);
+    }
+
     public ClassRelativePath(String basePath, String relativePath) {
         this.basePath = basePath;
         this.relativePath = relativePath;

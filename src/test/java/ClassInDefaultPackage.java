@@ -1,21 +1,18 @@
 import com.zjp.FastClassPathScanner;
 
-import com.zjp.beans.MethodInfo;
-import fai.comm.netkit.Client;
-import fai.comm.netkit.Server;
+import com.zjp.sterotype.Component;
 import org.junit.Test;
-
-import java.lang.reflect.Method;
-
 
 public class ClassInDefaultPackage {
 
     @Test
     public void myScannerTest() {
 
-        FastClassPathScanner scanner = new FastClassPathScanner("com.zjp", "jp.spring", "fai")
-                .matchSubClassOf(Server.class, (info, c) -> System.out.println("server | " + c ))
-                .matchSubClassOf(Client.class, (info, c) -> System.out.println("client | " + c ));
+        FastClassPathScanner scanner = new FastClassPathScanner("com.sun.xml.bind.v2.model.impl")
+                .matchClassesWithAnnotation(Component.class, (info, c) -> {
+                    System.out.println(c);
+                });
+        scanner.scan(1);
 
       /*  FastClassPathScanner scanner = new FastClassPathScanner("com.zjp", "jp.spring", "fai");
               *//*  .matchSubClassOf(Server.class, (info, c) -> System.out.println("server | " + c ))

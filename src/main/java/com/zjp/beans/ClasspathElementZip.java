@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.zip.ZipEntry;
@@ -39,7 +40,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
 
         try {
             zipFile = new ZipFile(classpathFile);
-            classFileMatches = new ArrayList<>(zipFile.size());
+            classFilesMap = new HashMap<String, ZipEntry>( (zipFile.size() / 2) + 1);//in case zero length
              scanZipFile(classRelativePath, zipFile);
         } catch (IOException e) {
             ioExceptionOnOpen = true;
@@ -75,7 +76,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
                 case NOT_WITHIN_WHITE_LISTED_PATH:continue;
                 case WITHIN_WHITE_LISTED_PATH: {
                     if(ClassRelativePath.isClassFile(relativePath)) {
-                        classFileMatches.add(new ClassResource<>(zipEntry, relativePath));
+                        classFilesMap.put(relativePath, zipEntry);
                     }
                 }
             }
@@ -89,9 +90,9 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
             throws IOException {
         if(!ioExceptionOnOpen) {
             try (InputStream stream = zipFile.getInputStream(zipEntry)){
-                ClassInfoBuilder infoUnlinked = parser.readClassInfoFromClassFileHeader(stream, internMap);
-                if(infoUnlinked != null) {
-                    infoBuilders.add(infoUnlinked);
+                ClassInfoBuilder infoBuilder = parser.readClassInfoFromClassFileHeader(stream, internMap);
+                if(infoBuilder != null) {
+                    infoBuilders.add(infoBuilder);
                 }
             }
         }

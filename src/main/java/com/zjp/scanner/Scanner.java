@@ -34,16 +34,6 @@ public class Scanner implements Callable<ClassGraph>{
 
     @Override
     public ClassGraph call() throws Exception {
-        String currDirPathStr = "";
-        try {
-            Path currDirPath = Paths.get("").toAbsolutePath();
-            currDirPath = currDirPath.normalize();
-            currDirPath = currDirPath.toRealPath(LinkOption.NOFOLLOW_LINKS);
-            currDirPathStr = FastPathResolver.resolve(currDirPath.toString());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not resolve current directory: " + currDirPathStr, e);
-        }
-
         /**
          * Get all classpathElements from the runtime-context, have no idea what these is ?
          * Write a class, and run the code below:
@@ -52,11 +42,11 @@ public class Scanner implements Callable<ClassGraph>{
         final List<String> classPathElementStrings = new ClasspathFinder().getRawClassPathStrings();
         final List<ClassRelativePath> rawClassPathElements = new ArrayList<>();
         for(String classElementStr : classPathElementStrings) {
-            rawClassPathElements.add(new ClassRelativePath(currDirPathStr, classElementStr));
+            rawClassPathElements.add(new ClassRelativePath(classElementStr));
         }
 
         /**
-         * split dir and jar file and started to scan them
+         * split dir and jar file than started to scan them
          * */
         final ClassRelativePathToElementMap elementMap = new ClassRelativePathToElementMap(specification, interruptionChecker);
         WorkQueue<ClassRelativePath> relativePathQueue = null;
