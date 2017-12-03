@@ -4,13 +4,12 @@ import com.zjp.scanner.ClassFileBinaryParser;
 import com.zjp.scanner.ClassRelativePath;
 import com.zjp.scanner.InterruptionChecker;
 import com.zjp.scanner.ScanSpecification;
-import com.zjp.utils.ScanPathMatch;
+import com.zjp.scanner.ScanPathMatch;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;

@@ -5,7 +5,7 @@ import java.util.*;
 /**
  * Created by Administrator on 2017/10/16.
  */
-class MultiMap {
+public class MultiMap {
     public static <K, V> boolean put(Map<K, List<V>> map, K key, V value) {
         List<V> set = map.get(key);
         if (set == null) {

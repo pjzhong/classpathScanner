@@ -1,6 +1,7 @@
 package com.zjp.scanner;
 
 import com.zjp.beans.*;
+import com.zjp.utils.ReflectionUtils;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -22,7 +24,7 @@ public class ClassFileBinaryParser {
 
         //Magic number
         if(classInput.readInt() != 0xCAFEBABE) {
-            throw new RuntimeException("No a valid class File");
+            throw new RuntimeException("Not a valid class File");
         }
         classInput.readUnsignedShort();//Minor version
         classInput.readUnsignedShort();//Major version
@@ -62,7 +64,7 @@ public class ClassFileBinaryParser {
         //Access flags
         final int accFlag = classInput.readUnsignedShort();
         final boolean isSynthetic= (accFlag & 0x1000) != 0;
-        if(isSynthetic) { return null; }//do not scanned class file generate by compiler
+        if(isSynthetic) { return null; }//skip class file generate by compiler
 
         final String className = readRefString(classInput, constantPool).replace('/', '.');
         if(className.equals("java.lang.Object")) {
@@ -91,8 +93,8 @@ public class ClassFileBinaryParser {
             if("RuntimeVisibleAnnotations".equals(attributeName)) {
                 final int annotationCount = classInput.readUnsignedShort();
                 for(int j = 0; j < annotationCount; j++) {
-                    final String annotationName = readAnnotation(classInput, constantPool);
-                    infoBuilder.addAnnotation(annotationName);
+                    AnnotationInfo info = readAnnotation(classInput, constantPool);
+                    infoBuilder.addAnnotation(info);
                 }
             } else {
                 classInput.skipBytes(attributeLength);
@@ -120,9 +122,9 @@ public class ClassFileBinaryParser {
                     case "RuntimeVisibleAnnotations":{
                         final int annotationCount = classInput.readUnsignedShort();
                         for(int k = 0; k < annotationCount; k++) {
-                            final String annotationName = readAnnotation(classInput, constantPool);
-                            infoBuilder.addFieldAnnotation(annotationName);
-                            fieldBuilder.addAnnotationNames(annotationName);
+                            AnnotationInfo info = readAnnotation(classInput, constantPool);
+                            infoBuilder.addFieldAnnotation(info);
+                            fieldBuilder.addAnnotationNames(info);
                         }
                     } break;
                     case "ConstantValue": {
@@ -164,31 +166,38 @@ public class ClassFileBinaryParser {
             final String methodName = readRefString(classInput, constantPool);
             final String descriptor = readRefString(classInput, constantPool);
 
+            MethodInfoBuilder methodInfoBuilder = MethodInfo.builder(infoBuilder.getClassName(), methodName, descriptor, accessFlags);
+
             final int attributeCount = classInput.readUnsignedShort();
-            List<String> methodAnnotationNames = new ArrayList<>(1);
             for(int j = 0; j < attributeCount; j++) {
                 final String attributeName = readRefString(classInput, constantPool);
                 final int attributeLength = classInput.readInt();
-                if(attributeName.equals("RuntimeVisibleAnnotations")) {
-                    final int annotationCount = classInput.readUnsignedShort();
-                    for(int k = 0; k < annotationCount; k++) {
-                        final String annotationName = readAnnotation(classInput, constantPool);
-                        infoBuilder.addMethodAnnotation(annotationName);
-                        methodAnnotationNames.add(annotationName);
-                    }
-                } else {
-                    classInput.skipBytes(attributeLength);
+                switch (attributeName) {
+                    case "RuntimeVisibleAnnotations":{
+                        final int annotationCount = classInput.readUnsignedShort();
+                        for(int k = 0; k < annotationCount; k++) {
+                            AnnotationInfo info = readAnnotation(classInput, constantPool);
+                            infoBuilder.addMethodAnnotation(info);
+                            methodInfoBuilder.addAnnotationName(info);
+                        }
+                    } break;
+                    case "AnnotationDefault": {
+
+                        List<Object> defaultValue = parseElementValue(classInput, constantPool);
+                        methodInfoBuilder.setDefaultValue(defaultValue);
+                    } break;
+                    default:classInput.skipBytes(attributeLength);
                 }
             }
 
-            final boolean isConstructor = "<init>".equals(methodName);
-            final String className = infoBuilder.getClassName();
-            infoBuilder.addMethodInfo(new MethodInfo(className, isConstructor ? className : methodName,
-                    accessFlags, descriptor, methodAnnotationNames, isConstructor));
+            infoBuilder.addMethodInfo(methodInfoBuilder.build());
         }
     }
 
-    private String readAnnotation(final DataInputStream input, final Object[] constantPool) throws IOException {
+    /**
+     * try to read a annotation and it's value  from this class, method or field, but ignore nested annotations
+     * */
+    private AnnotationInfo readAnnotation(final DataInputStream input, final Object[] constantPool) throws IOException {
         final String annotationFieldDescriptor = readRefString(input, constantPool);
         String annotationClassName;
         if(annotationFieldDescriptor.charAt(0) == 'L'
@@ -200,46 +209,72 @@ public class ClassFileBinaryParser {
             //Should not happen, because annotation is an Object
             annotationClassName = annotationFieldDescriptor;
         }
-
+        AnnotationInfo info = new AnnotationInfo(annotationClassName);
         final int numElementValuePairs = input.readUnsignedShort();
         for(int i = 0; i < numElementValuePairs; i++) {
             final String elementName = readRefString(input, constantPool);//element_name_index
-            readAnnotationElementValue(input, constantPool);
+            List<Object> value = parseElementValue(input, constantPool);
+            info.addValue(elementName, value);
         }
 
-        return annotationClassName;
+        return info;
     }
 
+
     /**
-     * todo try to parse AnnotationElementValue
+     * @param input the bytes of stream of a classFile
+     * @param constantPool as the name means
      * */
-    private void readAnnotationElementValue(final DataInputStream input, final Object[] constantPool)
+    private List<Object> parseElementValue(final DataInputStream input, final Object[] constantPool)
             throws IOException {
         final int tag = input.readUnsignedByte();
         switch (tag) {
-            case 'B':
-            case 'C':
-            case 'D':
-            case 'F':
-            case 'I':
-            case 'J':
-            case 'S':
-            case 'Z':
-            case 's':
-            case 'c':
-                //constant_value_index
-                input.skipBytes(2);break;
-            case 'e'://enum_constant_index
-                input.skipBytes(4);break;
             case '@'://Complex(nested) annotation
-                readAnnotation(input, constantPool);break;
+                readAnnotation(input, constantPool);//ignore nested annotations
+                return Collections.EMPTY_LIST;
             case '['://array_value
                 final int count = input.readUnsignedShort();
+                List<Object> arrayValues = new ArrayList<>();
                 for(int i = 0; i < count; i++) {
                     //Nested annotation element value
-                    readAnnotationElementValue(input, constantPool);
+                    arrayValues.addAll(parseElementValue(input, constantPool));
                 }
-                break;
+                return arrayValues;
+            default:return Arrays.asList(parseElementValue(tag, input, constantPool));
+        }
+    }
+
+    private Object parseElementValue(int tag, DataInputStream input, Object[] constantPool) throws IOException {
+        switch (tag) {
+            case 'B':return ((Integer) constantPool[input.readUnsignedShort()]).byteValue();
+            case 'C':return (char) ((Integer) constantPool[input.readUnsignedShort()]).intValue();
+            case 'S':return ((Integer) constantPool[input.readUnsignedShort()]).shortValue();
+            case 'Z':return ((Integer) constantPool[input.readUnsignedShort()]) != 0;
+            case 'I'://int
+            case 'J'://long
+            case 'D'://double
+            case 'F'://float
+            case 's'://string
+                return constantPool[input.readUnsignedShort()];//Already in correct type;
+            case 'c': { //class_info_index
+                String typeDescriptor = (String) constantPool[input.readUnsignedShort()];
+                List<String> classInfo = ReflectionUtils.parseTypeDescriptor(typeDescriptor);
+                if (classInfo.isEmpty() || classInfo.size() > 1) {
+                    throw new RuntimeException("Illegal element_value class_info_index: " + typeDescriptor);
+                }
+                return classInfo.get(0);
+            }
+            case 'e': {//enum_constant_index
+                final String typeDescriptor = (String) constantPool[input.readUnsignedShort()];
+                List<String> type = ReflectionUtils.parseTypeDescriptor(typeDescriptor);
+                if (type.isEmpty() || type.size() > 1) {
+                    throw new RuntimeException("Illegal element_value enum_constant_index: " + typeDescriptor);
+                }
+                final String constantName = (String) constantPool[input.readUnsignedShort()];
+                String enumObj = type.get(0) + "." + constantName;
+                return enumObj;
+            }
+            default:return null;
         }
     }
 

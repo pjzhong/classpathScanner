@@ -2,26 +2,24 @@ package com.zjp.beans;
 
 import com.zjp.utils.ReflectionUtils;
 import jdk.nashorn.internal.ir.annotations.Immutable;
+import sun.reflect.CallerSensitive;
 
 import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Administrator on 10/28/2017.
  */
 @Immutable
 public class MethodInfo {
-    private final String belongToClass;
-    private final String methodName;
-    private final int modifiers;
-    private final List<String> annotationNames;
-    private final List<String> parameterTypeStrings;
-    private final String returnTypeStr;
-    private final boolean isConstructor;
 
-    public MethodInfo(String className, String methodName, int modifiers, String typeDescriptor,
-                      List<String> annotationNames, boolean isConstructor) {
+    public static MethodInfoBuilder builder(String className, String methodName, String typeDescriptor, int accessFalg) {
+        return new MethodInfoBuilder(className, methodName, typeDescriptor, accessFalg);
+    }
+
+    MethodInfo(String className, String methodName, int modifiers, String typeDescriptor) {
         this.belongToClass = className;
         this.methodName = methodName;
         this.modifiers = modifiers;
@@ -32,8 +30,25 @@ public class MethodInfo {
         }
         this.parameterTypeStrings = typeNames.subList(0, typeNames.size() - 1);
         this.returnTypeStr = typeNames.get(typeNames.size() - 1);
+    }
 
-        this.annotationNames = annotationNames.isEmpty() ? Collections.<String> emptyList() : annotationNames;
+    private final String belongToClass;
+    private final String methodName;
+    private final int modifiers;
+    private final List<String> parameterTypeStrings;
+    private final String returnTypeStr;
+
+    private boolean isConstructor = false;
+    private Map<String, AnnotationInfo> annotations = Collections.EMPTY_MAP;
+    private List<Object> defaultValues = Collections.EMPTY_LIST;
+
+    void setAnnotations(Map<String, AnnotationInfo> annotations) { this.annotations = annotations; }
+
+    void setDefaultValues(List<Object> defaultValues) {
+        this.defaultValues = defaultValues;
+    }
+
+    void setIsConstructor(boolean isConstructor) {
         this.isConstructor = isConstructor;
     }
 
@@ -124,8 +139,14 @@ public class MethodInfo {
     }
 
     /** Returns the names of annotations on the method, or the empty list if none. */
-    public List<String> getAnnotationNames() {
-        return Collections.unmodifiableList(annotationNames);
+    public Map<String, AnnotationInfo> getAnnotations() {
+        return Collections.unmodifiableMap(annotations);
+    }
+
+    /** Only annotation can have default values*/
+    @CallerSensitive
+    public List<Object> getDefaultValues() {
+        return defaultValues;
     }
 
     @Override
@@ -153,26 +174,14 @@ public class MethodInfo {
     public String toString() {
         final StringBuilder buf = new StringBuilder();
 
-        if (!annotationNames.isEmpty()) {
-            for (final String annotationName : annotationNames) {
-                buf.append("@").append(annotationName).append("\n");
-            }
-        }
-
-        buf.append(getModifiers());
+        annotations.values().forEach( a -> buf.append(a).append(' '));
+        buf.append(getModifiers()).append(' ');
 
         if (!isConstructor) {
-            if (buf.length() > 0) {
-                buf.append(' ');
-            }
-            buf.append(getReturnTypeStr());
+            buf.append(getReturnTypeStr()).append(' ');
         }
 
-        if (buf.length() > 0) {
-            buf.append(' ');
-        }
         buf.append(methodName);
-
         buf.append('(');
         final List<String> paramTypes = getParameterTypeStrings();
         final boolean isVarargs = isVarArgs();
@@ -194,6 +203,15 @@ public class MethodInfo {
             }
         }
         buf.append(')');
+
+        if(!defaultValues.isEmpty()) {
+            buf.append(" default { ");
+            for(Object value : defaultValues) {
+                buf.append(value).append(", ");
+            }
+            buf.delete(buf.length() -2, buf.length() - 1);
+            buf.append('}');
+        }
 
         return buf.toString();
     }

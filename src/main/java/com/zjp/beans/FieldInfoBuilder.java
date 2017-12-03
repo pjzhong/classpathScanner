@@ -1,7 +1,6 @@
 package com.zjp.beans;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by Administrator on 2017/11/23.
@@ -18,7 +17,7 @@ public class FieldInfoBuilder {
     public FieldInfo build() {
         FieldInfo info = new FieldInfo(className, fieldName, typeDescriptor, modifiers);
         if(constantValue != null) { info.setConstantValue(constantValue); }
-        if(annotationNames != null) { info.setAnnotationNames(annotationNames);}
+        info.setAnnotations(annotations);
         return info;
     }
 
@@ -26,15 +25,11 @@ public class FieldInfoBuilder {
         this.constantValue = constantValue;
     }
 
-    public void addAnnotationNames(String annotations) {
-        if(annotationNames == null) {
-            annotationNames = new ArrayList<>(1);
+    public void addAnnotationNames(AnnotationInfo annotation) {
+        if(annotations.isEmpty()) {
+            annotations = new HashMap<>(2);
         }
-        annotationNames.add(annotations);
-    }
-
-    public void setAnnotationNames(List<String> annotationNames) {
-        this.annotationNames = annotationNames;
+        annotations.put(annotation.getName(), annotation);
     }
 
     private final String className;
@@ -44,5 +39,5 @@ public class FieldInfoBuilder {
 
     //optional value
     private Object constantValue;
-    private List<String> annotationNames;
+    private Map<String, AnnotationInfo> annotations = Collections.EMPTY_MAP;
 }

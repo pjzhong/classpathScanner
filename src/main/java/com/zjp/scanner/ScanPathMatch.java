@@ -1,4 +1,4 @@
-package com.zjp.utils;
+package com.zjp.scanner;
 
 /**
  * Created by Administrator on 11/4/2017.

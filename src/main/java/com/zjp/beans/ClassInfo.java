@@ -57,12 +57,17 @@ public class ClassInfo implements Comparable<ClassInfo> {
         }
     }
 
-    void addAnnotation(String annotationName, ClassInfoBuilder builder) {
-        if(StringUtils.notEmpty(annotationName)) {
-            final ClassInfo annotationClass = builder.getClassInfo(annotationName);
+    void addAnnotation(AnnotationInfo annotation, ClassInfoBuilder builder) {
+        if(annotation != null) {
+            final ClassInfo annotationClass = builder.getClassInfo(annotation.getName());
             annotationClass.isAnnotation = true;
             this.addRelatedClass(Relation.ANNOTATIONS, annotationClass);
             annotationClass.addRelatedClass(Relation.ANNOTATED_CLASSES, this);
+
+            if(annotationInfoList == null) {
+                annotationInfoList = new HashMap<>(2);
+            }
+            annotationInfoList.put(annotation.getName(), annotation);
         }
     }
 
@@ -226,6 +231,7 @@ public class ClassInfo implements Comparable<ClassInfo> {
 
     private List<FieldInfo> fieldInfoList;
     private List<MethodInfo> methodInfoList;
+    private Map<String, AnnotationInfo> annotationInfoList;
 
     private enum Relation {
         SUPERCLASSES,

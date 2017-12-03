@@ -10,6 +10,7 @@ import java.util.List;
 public class ReflectionUtils {
 
     /** Convert field or method modifiers into a string representation, e.g. "public static final". */
+    //todo refactor this method
     public static String modifiersToString(final int modifiers, final boolean isMethod) {
         final StringBuilder buf = new StringBuilder();
         if ((modifiers & Modifier.PUBLIC) != 0) {

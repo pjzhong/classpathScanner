@@ -6,6 +6,7 @@ import jdk.nashorn.internal.ir.annotations.Immutable;
 import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Administrator on 10/28/2017.
@@ -72,10 +73,12 @@ public class FieldInfo {
         return constantValue;
     }
 
-    /** Returns the names of annotations on the field, or the empty list if none. */
-    public List<String> getAnnotationNames() {
-        return annotationNames == null ? Collections.EMPTY_LIST : Collections.unmodifiableList(annotationNames);
+    public Map<String, AnnotationInfo> getAnnotations() {
+        return annotations == null ? Collections.EMPTY_MAP : Collections.unmodifiableMap(annotations);
     }
+
+    /** Returns the names of annotations on the field, or the empty list if none. */
+
 
     @Override
     public boolean equals(Object o) {
@@ -101,19 +104,8 @@ public class FieldInfo {
     public String toString() {
         final StringBuilder buf = new StringBuilder();
 
-        for (final String annotationName : getAnnotationNames()) {
-            buf.append("@").append(annotationName).append("\n");
-        }
-
-        buf.append(getModifiers());
-
-        if (buf.length() > 0) {
-            buf.append(' ');
-        }
-        buf.append(getTypeStr());
-
-        buf.append(' ');
-        buf.append(fieldName);
+        getAnnotations().values().forEach(a -> buf.append(a).append(' '));
+        buf.append(getModifiers()).append(' ').append(getTypeStr()).append(' ').append(fieldName);
 
         if(getConstantValue() != null) {
             buf.append(" = ").append(constantValue).append(';');
@@ -138,8 +130,9 @@ public class FieldInfo {
         this.typeStr = typeNames.get(0);
     }
 
-    void setAnnotationNames(List<String> annotationNames) {
-        this.annotationNames = annotationNames;
+
+    void setAnnotations(Map<String, AnnotationInfo> annotations) {
+        this.annotations = annotations;
     }
 
     void setConstantValue(Object constantValue) {
@@ -152,5 +145,5 @@ public class FieldInfo {
     private final String typeStr;
 
     private  Object constantValue = null;
-    private  List<String> annotationNames;
+    private Map<String, AnnotationInfo> annotations;
 }

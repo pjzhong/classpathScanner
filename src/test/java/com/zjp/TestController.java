@@ -3,6 +3,7 @@ package com.zjp;
 import com.zjp.sterotype.AutoWired;
 import com.zjp.sterotype.Controller;
 import com.zjp.sterotype.RequestMapping;
+import com.zjp.sterotype.RequestMethod;
 
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,7 @@ import java.util.Map;
 /**
  * Created by Administrator on 10/14/2017.
  */
-@Controller
+@Controller("/index")
 public class TestController {
 
     private static int num = 1;
@@ -24,17 +25,17 @@ public class TestController {
     private static final Boolean IamFalse = false;
 
 
-    @AutoWired
+    @AutoWired(required = true)
     TestComponent component;
 
     public TestController() {
     }
 
-    @RequestMapping({"/index", "/hello"})
+    @RequestMapping(value = {"/index", "/hello"}, methods = RequestMethod.GET)
     public void index(Map<String, Integer> integerMap) {
     }
 
-    @RequestMapping()
+    @RequestMapping
     public void index2(String test, int b, List<String> list) {
     }
 

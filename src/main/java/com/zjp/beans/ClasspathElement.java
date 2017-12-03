@@ -26,12 +26,15 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
                 doParseClassFile(fileResource, parser, scanSpecification, internMap, builders);
                 interruptionChecker.check();
             } catch (Exception e) {
-                System.out.println("something wrong when parsing:" + fileResource + ", exception:" + e);
-                throw new RuntimeException(e);
+                System.out.println("something wrong while parsing:" + fileResource + "\n" + e.getClass());
             }
         }
     }
 
+    /**
+     * remove file encountered file from classFilesMap
+     * @param encounteredRelativePath the files has encountered in the run-time context
+     * */
     public void maskFiles(Set<String> encounteredRelativePath) {
         final Set<String> maskedRelativePaths = new HashSet<>();
         classFilesMap.forEach( (relativePath, classResource) -> {
