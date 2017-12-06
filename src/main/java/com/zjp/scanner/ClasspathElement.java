@@ -1,9 +1,6 @@
-package com.zjp.beans;
+package com.zjp.scanner;
 
-import com.zjp.scanner.ClassFileBinaryParser;
-import com.zjp.scanner.ClassRelativePath;
-import com.zjp.scanner.InterruptionChecker;
-import com.zjp.scanner.ScanSpecification;
+import com.zjp.beans.ClassInfoBuilder;
 
 import java.io.IOException;
 import java.util.*;
@@ -19,16 +16,23 @@ import java.util.concurrent.ConcurrentMap;
 public abstract class ClasspathElement<F>  implements AutoCloseable {
 
     public void parseClassFiles(ClassFileBinaryParser parser,
-                         final ConcurrentMap<String, String> internMap,
                          final ConcurrentLinkedQueue<ClassInfoBuilder> builders) {
+        long parseStart = System.nanoTime();
         for(F fileResource : classFilesMap.values()) {
             try {
-                doParseClassFile(fileResource, parser, scanSpecification, internMap, builders);
+                doParseClassFile(fileResource, parser, scanSpecification, builders);
                 interruptionChecker.check();
             } catch (Exception e) {
                 System.out.println("something wrong while parsing:" + fileResource + "\n" + e.getClass());
             }
         }
+        StringBuilder builder = new StringBuilder()
+                .append(classRelativePath).append(" ")
+                .append(Thread.currentThread())
+                .append(" parse cost:")
+                .append((System.nanoTime() - parseStart));
+        System.out.println(builder);
+        close();
     }
 
     /**
@@ -49,7 +53,6 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
     }
 
     protected abstract void doParseClassFile(F file, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentMap<String, String> internMap,
                                     ConcurrentLinkedQueue<ClassInfoBuilder> builders) throws IOException;
 
     public abstract void close();

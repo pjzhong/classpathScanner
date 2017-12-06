@@ -1,8 +1,5 @@
 package com.zjp.scanner;
 
-import com.zjp.beans.ClassPathElementDir;
-import com.zjp.beans.ClasspathElement;
-import com.zjp.beans.ClasspathElementZip;
 import com.zjp.utils.SingleTonMap;
 
 /**

@@ -1,18 +1,19 @@
 package com.zjp.scanner;
 
 import com.zjp.beans.ClassGraph;
-import com.zjp.beans.ClassInfo;
 import com.zjp.beans.ClassInfoBuilder;
-import com.zjp.beans.ClasspathElement;
-import com.zjp.utils.FastPathResolver;
 import com.zjp.utils.WorkQueue;
 
-import java.io.IOException;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.OpenOption;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Administrator on 10/28/2017.
@@ -72,7 +73,8 @@ public class Scanner implements Callable<ClassGraph>{
 
 
         /**
-         * restore the classpathOrder and filtered the same classes but in difference jar file
+         * restore the classpathOrder and filtered the same classes but occurs in difference jar file
+         * (remove the second and subsequent)
          * */
         List<ClasspathElement<?>> classpathOrder = restoredClasspathOrder(rawClassPathElements, elementMap);
         Set<String> encounteredClassFile = new HashSet<>();
@@ -84,12 +86,10 @@ public class Scanner implements Callable<ClassGraph>{
          * start to parse the class files found in the runtime context
          * */
         final ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders = new ConcurrentLinkedQueue<>();
-        final ConcurrentMap<String, String> stringInternMap = new ConcurrentHashMap<>();
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
         WorkQueue<ClasspathElement<?>> workQueue = null;
         try {
-            workQueue = new WorkQueue<>(classpathOrder,
-                    e -> e.parseClassFiles(parser, stringInternMap, infoBuilders), interruptionChecker);
+            workQueue = new WorkQueue<>(classpathOrder, e -> e.parseClassFiles(parser, infoBuilders), interruptionChecker);
             workQueue.startWorker(executorService, workers - 1 /* in case there only one thread*/);
             workQueue.runWorkLoop();
         } finally {
@@ -98,10 +98,14 @@ public class Scanner implements Callable<ClassGraph>{
             }
         }
 
+
+
         /**
          * build the classGraph in single-thread
          * */
+        long buildStart = System.nanoTime();
         ClassGraph classGraph = ClassGraph.builder(specification, infoBuilders).build();
+        System.out.println("buildGraph cost:" + (System.nanoTime() - buildStart));
         return classGraph;
     }
 

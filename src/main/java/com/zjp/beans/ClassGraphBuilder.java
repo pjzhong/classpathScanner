@@ -12,7 +12,7 @@ import java.util.Map;
 public class ClassGraphBuilder {
 
     public ClassGraph build() {
-        Map<String, ClassInfo> infoMap = new HashMap<String, ClassInfo>();
+        Map<String, ClassInfo> infoMap = new HashMap<String, ClassInfo>(builders.size());
         for(ClassInfoBuilder builder : builders) {
             builder.build(infoMap);
         }

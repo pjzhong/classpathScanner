@@ -1,10 +1,6 @@
-package com.zjp.beans;
+package com.zjp.scanner;
 
-import com.zjp.scanner.ClassFileBinaryParser;
-import com.zjp.scanner.ClassRelativePath;
-import com.zjp.scanner.InterruptionChecker;
-import com.zjp.scanner.ScanSpecification;
-import com.zjp.scanner.ScanPathMatch;
+import com.zjp.beans.ClassInfoBuilder;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -83,11 +79,10 @@ public class ClassPathElementDir extends ClasspathElement<File> {
     }
 
     protected void doParseClassFile(File file, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentMap<String, String> internMap,
                                     ConcurrentLinkedQueue<ClassInfoBuilder> unLinkInfos) throws IOException {
         if(!ioExceptionOnOpen) {
             try (InputStream stream = new FileInputStream(file)){
-                ClassInfoBuilder unlinked = parser.readClassInfoFromClassFileHeader(stream, internMap);
+                ClassInfoBuilder unlinked = parser.readClassInfoFromClassFileHeader(stream);
                 if(unlinked != null) { unLinkInfos.add(unlinked); }
             }
         }
@@ -96,5 +91,6 @@ public class ClassPathElementDir extends ClasspathElement<File> {
 
     //do nothing;
     @Override
-    public void close() {}
+    public void close() {
+    }
 }

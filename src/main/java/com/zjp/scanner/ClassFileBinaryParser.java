@@ -11,15 +11,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Administrator on 10/15/2017.
  */
 public class ClassFileBinaryParser {
 
-    public ClassInfoBuilder readClassInfoFromClassFileHeader(final InputStream inputStream,
-                                                             ConcurrentMap<String, String> interMap) throws IOException{
+    public ClassInfoBuilder readClassInfoFromClassFileHeader(final InputStream inputStream) throws IOException{
         final DataInputStream classInput = new DataInputStream(new BufferedInputStream(inputStream, 1024));
 
         //Magic number
@@ -66,20 +67,20 @@ public class ClassFileBinaryParser {
         final boolean isSynthetic= (accFlag & 0x1000) != 0;
         if(isSynthetic) { return null; }//skip class file generate by compiler
 
-        final String className = readRefString(classInput, constantPool).replace('/', '.');
+        final String className = intern(readRefString(classInput, constantPool).replace('/', '.'));
         if(className.equals("java.lang.Object")) {
             //java.lang.Object doesn't have a superclass to be linked to, can simply return
             return null;
         }
 
-        final String superclassName = readRefString(classInput, constantPool).replace('/', '.');
-        final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, accFlag, interMap);
+        final String superclassName = intern(readRefString(classInput, constantPool).replace('/', '.'));
+        final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, accFlag);
         infoBuilder.addSuperclass(superclassName);
 
         //Interfaces
         final int interfaceCount = classInput.readUnsignedShort();
         for(int i = 0; i < interfaceCount; i++) {
-            infoBuilder.addImplementedInterface(readRefString(classInput, constantPool).replace('/', '.'));
+            infoBuilder.addImplementedInterface(intern(readRefString(classInput, constantPool).replace('/', '.')));
         }
 
         parseFields(classInput, constantPool, infoBuilder);
@@ -203,8 +204,8 @@ public class ClassFileBinaryParser {
         if(annotationFieldDescriptor.charAt(0) == 'L'
                 && annotationFieldDescriptor.charAt(annotationFieldDescriptor.length() - 1) == ';' ) {
             //Lcom/xyz/Annotation; -> com.xyz.Annotation
-            annotationClassName = annotationFieldDescriptor.substring(1, annotationFieldDescriptor.length() - 1)
-                    .replace('/', '.');
+            annotationClassName = annotationFieldDescriptor.substring(1, annotationFieldDescriptor.length() - 1).replace('/', '.');
+            annotationClassName = intern(annotationClassName);
         } else {
             //Should not happen, because annotation is an Object
             annotationClassName = annotationFieldDescriptor;
@@ -288,5 +289,21 @@ public class ClassFileBinaryParser {
         }
     }
 
-    public ClassFileBinaryParser() {}
+    /**
+     * 复用String对象
+     * */
+    private String intern(final String string) {
+        if (string == null) {
+            return null;
+        }
+        final String oldValue = internStringMap.putIfAbsent(string, string);
+        return oldValue == null ? string : oldValue;
+    }
+
+    public ClassFileBinaryParser() {
+        internStringMap = new ConcurrentHashMap<String, String>(128);
+    }
+
+    //缓存重复字符串对象
+    private ConcurrentMap<String, String> internStringMap;
 }

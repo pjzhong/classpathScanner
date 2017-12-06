@@ -190,8 +190,8 @@ public class ClassInfo implements Comparable<ClassInfo> {
         this.className = className;
     }
 
-    public static ClassInfoBuilder builder(String className, int accessFlag, ConcurrentMap<String, String> internMap) {
-        return new ClassInfoBuilder(className, accessFlag, internMap);
+    public static ClassInfoBuilder builder(String className, int accessFlag) {
+        return new ClassInfoBuilder(className, accessFlag);
     }
 
     @Override

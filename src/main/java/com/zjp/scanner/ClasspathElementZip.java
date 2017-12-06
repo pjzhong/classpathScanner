@@ -1,10 +1,6 @@
-package com.zjp.beans;
+package com.zjp.scanner;
 
-import com.zjp.scanner.ClassFileBinaryParser;
-import com.zjp.scanner.ClassRelativePath;
-import com.zjp.scanner.InterruptionChecker;
-import com.zjp.scanner.ScanSpecification;
-import com.zjp.scanner.ScanPathMatch;
+import com.zjp.beans.ClassInfoBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -84,12 +80,11 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
 
     @Override
     protected void doParseClassFile(ZipEntry zipEntry, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentMap<String, String> internMap,
                                     ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders)
             throws IOException {
         if(!ioExceptionOnOpen) {
             try (InputStream stream = zipFile.getInputStream(zipEntry)){
-                ClassInfoBuilder infoBuilder = parser.readClassInfoFromClassFileHeader(stream, internMap);
+                ClassInfoBuilder infoBuilder = parser.readClassInfoFromClassFileHeader(stream);
                 if(infoBuilder != null) {
                     infoBuilders.add(infoBuilder);
                 }

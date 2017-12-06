@@ -52,44 +52,36 @@ public class ClassInfoBuilder {
         classInfo.addMethodInfo(methodInfoList);
     }
 
-    private String intern(final String string) {
-        if (string == null) {
-            return null;
-        }
-        final String oldValue = stringInternMap.putIfAbsent(string, string);
-        return oldValue == null ? string : oldValue;
-    }
-
     public void addSuperclass(final String superclassName) {
-        this.superclassName = intern(superclassName);
+        this.superclassName = superclassName;
     }
 
     public void addImplementedInterface(final String interfaceName) {
         if (implementedInterfaces.isEmpty()) {
             implementedInterfaces = new ArrayList<>();
         }
-        implementedInterfaces.add(intern(interfaceName));
+        implementedInterfaces.add(interfaceName);
     }
 
     public void addAnnotation(AnnotationInfo annotation) {
         if (annotations.isEmpty()) {
             annotations = new HashMap<>(2);
         }
-        annotations.put(intern(annotation.getName()), annotation);
+        annotations.put(annotation.getName(), annotation);
     }
 
     public void addMethodAnnotation(AnnotationInfo annotation) {
         if (methodAnnotations.isEmpty()) {
             methodAnnotations = new HashSet<>();
         }
-        methodAnnotations.add(intern(annotation.getName()));
+        methodAnnotations.add(annotation.getName());
     }
 
     public void addFieldAnnotation(AnnotationInfo annotation) {
         if (fieldAnnotations.isEmpty()) {
             fieldAnnotations = new HashSet<>();
         }
-        fieldAnnotations.add(intern(annotation.getName()));
+        fieldAnnotations.add(annotation.getName());
     }
 
     public void addFieldInfo(final FieldInfo fieldInfo) {
@@ -122,19 +114,15 @@ public class ClassInfoBuilder {
         return superclassName;
     }
 
-    ClassInfoBuilder(final String className, final int accessFlag,
-                     final ConcurrentMap<String, String> stringInternMap) {
-        this.stringInternMap = stringInternMap;
-        this.className = intern(className);
+    ClassInfoBuilder(final String className, final int accessFlag) {
+        this.className = className;
         this.accessFlag = accessFlag;
     }
 
     private final String className;
 
     private final int accessFlag;
-    // Superclass (can be null if no superclass, or if superclass is blacklisted)
-
-    private String superclassName;
+    private String superclassName;    // Superclass (can be null if no superclass, or if superclass is blacklisted)
     private Set<String> methodAnnotations = Collections.EMPTY_SET;
     private Set<String> fieldAnnotations = Collections.EMPTY_SET;
     private List<String> implementedInterfaces = Collections.EMPTY_LIST;
@@ -143,5 +131,4 @@ public class ClassInfoBuilder {
     private List<MethodInfo> methodInfoList = Collections.EMPTY_LIST;
 
     private Map<String, ClassInfo> infoMap; //intense share by all ClassInfoBuilder instance
-    private final ConcurrentMap<String, String> stringInternMap;//复用字符串
 }
