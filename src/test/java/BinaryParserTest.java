@@ -18,8 +18,7 @@ public class BinaryParserTest {
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
         System.err.println();
 
-        ClassInfoBuilder builder = parser.readClassInfoFromClassFileHeader(new FileInputStream(new File("E:\\Fast-ClassPath-Scanner-zjp\\target\\test-classes\\com\\zjp\\TestController.class")),
-                new ConcurrentHashMap<>());
+        ClassInfoBuilder builder = parser.readClassInfoFromClassFileHeader(new FileInputStream(new File("E:\\Fast-ClassPath-Scanner-zjp\\target\\test-classes\\com\\zjp\\TestController.class")));
        /* System.out.println(System.getProperty("java.class.path"));*/
 
         System.out.println((char)99);

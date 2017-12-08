@@ -105,7 +105,7 @@ public class ClassGraph {
         this.classNameToInfo = infoMap;
     }
 
-    final Map<String, ClassInfo> classNameToInfo;
+    public final Map<String, ClassInfo> classNameToInfo;
     private final ScanSpecification specification;
     private enum ClassType {
         ALL,

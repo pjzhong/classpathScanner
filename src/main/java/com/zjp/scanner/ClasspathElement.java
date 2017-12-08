@@ -3,37 +3,18 @@ package com.zjp.scanner;
 import com.zjp.beans.ClassInfoBuilder;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-
 
 /** A classpath element (a directory or jarfile on the classpath).
  * leave nestedJar alone first
  *
  * The type Of file, can be File or ZipEntry Object
+ *
+ * Iterator can iterate through the input of file found in this ClasspathElement
  *  */
-public abstract class ClasspathElement<F>  implements AutoCloseable {
-
-    public void parseClassFiles(ClassFileBinaryParser parser,
-                         final ConcurrentLinkedQueue<ClassInfoBuilder> builders) {
-        long parseStart = System.nanoTime();
-        for(F fileResource : classFilesMap.values()) {
-            try {
-                doParseClassFile(fileResource, parser, scanSpecification, builders);
-                interruptionChecker.check();
-            } catch (Exception e) {
-                System.out.println("something wrong while parsing:" + fileResource + "\n" + e.getClass());
-            }
-        }
-        StringBuilder builder = new StringBuilder()
-                .append(classRelativePath).append(" ")
-                .append(Thread.currentThread())
-                .append(" parse cost:")
-                .append((System.nanoTime() - parseStart));
-        System.out.println(builder);
-        close();
-    }
+public abstract class ClasspathElement<F>  implements AutoCloseable, Iterable<InputStream> {
 
     /**
      * remove file encountered file from classFilesMap
@@ -52,8 +33,11 @@ public abstract class ClasspathElement<F>  implements AutoCloseable {
         maskedRelativePaths.forEach(classFilesMap::remove);
     }
 
-    protected abstract void doParseClassFile(F file, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentLinkedQueue<ClassInfoBuilder> builders) throws IOException;
+    /**
+     * iterate through all the inputStreams(open from the file founded in this ClasspathElement)
+     * @return an Iterator.
+     */
+    public abstract Iterator<InputStream> iterator();
 
     public abstract void close();
 

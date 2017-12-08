@@ -1,10 +1,14 @@
 import com.zjp.FastClassPathScanner;
 
-import com.zjp.scanner.ScanPathMatch;
 import com.zjp.sterotype.Component;
+
+import fai.comm.netkit.Client;
+import fai.comm.netkit.Server;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+
 
 public class ClassInDefaultPackage {
 
@@ -16,11 +20,12 @@ public class ClassInDefaultPackage {
                     System.out.println(c);
                 });
         scanner.scan(1);*/
+       FastClassPathScanner scanner = new FastClassPathScanner("com.zjp", "jp.spring", "fai")
+               .matchSubClassOf(Server.class, (info, c) -> System.out.println("server | " + c ))
+               .matchSubClassOf(Client.class, (info, c) -> System.out.println("client | " + c ))
+               .matchClassesWithAnnotation(Component.class, (info, c) -> System.out.println("Annotated by component| " + c));
+        scanner.scan();
 
-      /*  FastClassPathScanner scanner = new FastClassPathScanner("com.zjp", "jp.spring", "fai");
-              *//*  .matchSubClassOf(Server.class, (info, c) -> System.out.println("server | " + c ))
-                .matchSubClassOf(Client.class, (info, c) -> System.out.println("client | " + c ));*//*
-        scanner.scan();*/
 
        /* for(int i = 1000; i < 10000;i ++) {
             System.out.println( (i * -1 ) & 16 );
@@ -32,7 +37,7 @@ public class ClassInDefaultPackage {
 
         int index = some_object.hashCode() & ( hashMap.size() - 1);*/
 
-        List<String> lists = new ArrayList<String>();
+      /*  List<String> lists = new ArrayList<String>();
         lists.add("fasdfasd");
         lists.add("23");
             lists.add("er");
@@ -47,7 +52,7 @@ public class ClassInDefaultPackage {
         list.set(1, "pjz");
 
         System.out.println(list);
-        System.out.println(lists);
+        System.out.println(lists);*/
 
     }
 }

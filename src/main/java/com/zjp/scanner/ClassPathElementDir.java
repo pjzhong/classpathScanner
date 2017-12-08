@@ -8,9 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Exchanger;
 
 /**
  * FastClassPathScanner的ClassElement设计不好，竟然在父类里面提供初始化子类的方法
@@ -78,14 +80,25 @@ public class ClassPathElementDir extends ClasspathElement<File> {
         }
     }
 
-    protected void doParseClassFile(File file, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentLinkedQueue<ClassInfoBuilder> unLinkInfos) throws IOException {
-        if(!ioExceptionOnOpen) {
-            try (InputStream stream = new FileInputStream(file)){
-                ClassInfoBuilder unlinked = parser.readClassInfoFromClassFileHeader(stream);
-                if(unlinked != null) { unLinkInfos.add(unlinked); }
+    @Override
+    public Iterator<InputStream> iterator() {
+        return new Iterator<InputStream>() {
+            private Iterator<File> fileIterator = classFilesMap.values().iterator();
+
+            @Override
+            public boolean hasNext() {
+                return fileIterator.hasNext();
             }
-        }
+
+            @Override
+            public InputStream next() {
+                try {
+                    return new FileInputStream(fileIterator.next());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
     }
 
 

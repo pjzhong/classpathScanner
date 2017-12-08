@@ -40,4 +40,8 @@ public class InterruptionChecker {
         executionException = newExecutionException;
         return executionException;
     }
+
+    public ExecutionException getExecutionException() {
+        return executionException;
+    }
 }

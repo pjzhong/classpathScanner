@@ -4,21 +4,15 @@ import com.zjp.beans.ClassGraph;
 import com.zjp.beans.ClassInfoBuilder;
 import com.zjp.utils.WorkQueue;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.OpenOption;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Created by Administrator on 10/28/2017.
  */
-public class Scanner implements Callable<ClassGraph>{
+ public class Scanner implements Callable<ClassGraph>{
 
     private final ExecutorService executorService;
     private final FailureHandler failureHandler;
@@ -63,8 +57,8 @@ public class Scanner implements Callable<ClassGraph>{
                     }
                 }
             }, interruptionChecker);
-            relativePathQueue.startWorker(executorService, workers -1 /* in case there only one thread*/);
-            relativePathQueue.runWorkLoop();
+            relativePathQueue.start(executorService, workers -1 /* in case there only one thread*/);
+            relativePathQueue.runWorkers();
         } finally {
             if(relativePathQueue != null) {
                 relativePathQueue.close();
@@ -85,18 +79,38 @@ public class Scanner implements Callable<ClassGraph>{
         /**
          * start to parse the class files found in the runtime context
          * */
+        long parseStart = System.nanoTime();
         final ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders = new ConcurrentLinkedQueue<>();
         ClassFileBinaryParser parser = new ClassFileBinaryParser();
-        WorkQueue<ClasspathElement<?>> workQueue = null;
+        WorkQueue<InputStream> streamWorkQueue = null;
         try {
-            workQueue = new WorkQueue<>(classpathOrder, e -> e.parseClassFiles(parser, infoBuilders), interruptionChecker);
-            workQueue.startWorker(executorService, workers - 1 /* in case there only one thread*/);
-            workQueue.runWorkLoop();
+           streamWorkQueue = new WorkQueue<>(
+                    queue -> {
+                        for(ClasspathElement element : classpathOrder) {
+                            Iterator<InputStream> streamIterator = element.iterator();
+                            streamIterator.forEachRemaining(queue::addWorkUnit);
+                        }
+                    },
+                    stream -> {
+                        try {
+                            ClassInfoBuilder builder = parser.readClassInfoFromClassFileHeader(stream);
+                            if(builder != null) { infoBuilders.add(builder); }
+                        }  finally {
+                            stream.close();
+                        }
+                    },
+                    interruptionChecker
+            );
+            streamWorkQueue.start(executorService, workers -1 /* in case there only one thread*/ );
+            streamWorkQueue.runWorkers();
         } finally {
-            if(workQueue != null) {
-                workQueue.close();
+            if(streamWorkQueue != null) {
+                streamWorkQueue.close();
             }
+           classpathOrder.forEach(ClasspathElement::close);
         }
+        System.out.println("parsed done cost:" + (System.nanoTime() - parseStart));
+
 
 
 

@@ -16,38 +16,49 @@ public class WorkQueue<T> implements AutoCloseable {
     /**
      * why using double check here, I am a bit of confusing
      * */
-    public void runWorkLoop() throws InterruptedException, ExecutionException {
-        while (numWorkUnitsRemaining.get() > 0) {
-            T workUnit = null;
-            while(numWorkUnitsRemaining.get() > 0) {
-                interruptionChecker.check();
-                workUnit = workQueue.poll();
-                if(workUnit != null) {
-                   break;
+    public void runWorkers() throws InterruptedException, ExecutionException {
+        while ( (numWorkUnitsRemaining.get() > 0) || (producers.get() > 0)) {
+            interruptionChecker.check();
+            T workUnit = workQueue.poll();
+
+            if(workUnit != null) {
+                try {
+                    workUnitProcessor.processWorkUnit(workUnit);
+                } catch (Exception e) {
+                    throw interruptionChecker.executionException(e);
+                } finally {
+                    numWorkUnitsRemaining.decrementAndGet();
                 }
-            }
-            if(workUnit == null) { return; } // No work units remaining;
-            try {
-                workUnitProcessor.processWorkUnit(workUnit);
-            } catch (InterruptedException e) {
-                interruptionChecker.interrupt();
-                throw e;
-            } catch (Exception e) {
-                //todo say something about what is going on this thread , maybe ?
-                throw interruptionChecker.executionException(e);
-            } finally {
-                numWorkUnitsRemaining.decrementAndGet();
             }
         }
     }
 
-    public void startWorker(final ExecutorService executorService, int numWorkers) {
-        for(int i = 0; i < numWorkers; i++) {
+    public void runProducer()  throws Exception {
+        try {
+            producers.incrementAndGet();
+            workUnitProducer.produceWorkUnit(this);
+        } finally {
+            producers.decrementAndGet();
+        }
+    }
+
+    public void start(final ExecutorService executorService, int numWorkers) {
+        if(workUnitProducer != null) {
             workerFutures.add(executorService.submit( () -> {
                 try {
-                    runWorkLoop();
+                    runProducer();
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    interruptionChecker.executionException(e);
+                }
+            }));
+        }
+
+        for(int i = 1; i < numWorkers; i++) {
+            workerFutures.add(executorService.submit( () -> {
+                try {
+                    runWorkers();
+                } catch (Exception e) {
+                    interruptionChecker.executionException(e);
                 }
             }));
         }
@@ -58,15 +69,10 @@ public class WorkQueue<T> implements AutoCloseable {
         final boolean uncompletedWork = (numWorkUnitsRemaining.get() > 0);
         for(Future<?> future; (future = workerFutures.poll()) != null;) {
             try {
-                if(uncompletedWork) {
-                    future.cancel(true);
-                }
-                future.get();
-            } catch ( CancellationException | InterruptedException e) {
-                // Ignore
-            } catch (final ExecutionException e) {
+                future.cancel(true);
+            } catch (final Exception e) {
                 //todo log this exception
-                interruptionChecker.executionException(e);
+               /* interruptionChecker.executionException(e);*/
             }
         }
         if (uncompletedWork) {
@@ -75,14 +81,14 @@ public class WorkQueue<T> implements AutoCloseable {
     }
 
     /** Add a unit of work. May be called by workers to add more work units to the tail of the queue. */
-    private void addWorkUnit(final T workUnit) {
+    public void addWorkUnit(final T workUnit) {
         numWorkUnitsRemaining.incrementAndGet();
         workQueue.add(workUnit);
     }
 
     /** Add multiple units of work. May be called by workers to add more work units to the tail of the queue. */
     public void addWorkUnits(final Collection<T> workUnits) {
-        workUnits.forEach(u -> addWorkUnit(u));
+        workUnits.forEach(this::addWorkUnit);
     }
 
     /** A parallel work queue. */
@@ -93,15 +99,23 @@ public class WorkQueue<T> implements AutoCloseable {
     }
 
     /** A parallel work queue. */
-    private WorkQueue(final WorkUnitProcessor<T> workUnitProcesor, final InterruptionChecker interruptionChecker) {
-        this.workUnitProcessor = workUnitProcesor;
+    public WorkQueue(WorkUnitProducer<T> workUnitProducer, WorkUnitProcessor<T> workUnitProcessor,
+                     final InterruptionChecker interruptionChecker) {
+        this(workUnitProcessor, interruptionChecker);
+        this.workUnitProducer = workUnitProducer;
+    }
+
+    /** A parallel work queue. */
+    private WorkQueue(final WorkUnitProcessor<T> workUnitProcessor, final InterruptionChecker interruptionChecker) {
+        this.workUnitProcessor = workUnitProcessor;
         this.interruptionChecker = interruptionChecker;
     }
 
     /**
      * The work Unit processor.
      * */
-    private final WorkUnitProcessor<T> workUnitProcessor;
+    private WorkUnitProcessor<T> workUnitProcessor;
+    private WorkUnitProducer<T> workUnitProducer;
 
     private final ConcurrentLinkedQueue<T> workQueue = new ConcurrentLinkedQueue<>();
 
@@ -111,7 +125,8 @@ public class WorkQueue<T> implements AutoCloseable {
      * being done allows us to use this count to safely detect when all work has been completed. This is needed
      * because work units can add new work units to the work queue.
      */
-    private final AtomicInteger numWorkUnitsRemaining = new AtomicInteger();
+    public final AtomicInteger numWorkUnitsRemaining = new AtomicInteger();
+    private final AtomicInteger producers = new AtomicInteger(0);
 
     /** The Future object added for each worker, used to detect worker completion. */
     private final ConcurrentLinkedQueue<Future<?>> workerFutures = new ConcurrentLinkedQueue<>();
@@ -125,5 +140,10 @@ public class WorkQueue<T> implements AutoCloseable {
     @FunctionalInterface
     public interface WorkUnitProcessor<T>  {
         void processWorkUnit(T workUnit) throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface WorkUnitProducer<T> {
+        void produceWorkUnit(WorkQueue<T> queue) throws Exception;
     }
 }

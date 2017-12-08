@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.zip.ZipEntry;
@@ -35,7 +36,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
 
         try {
             zipFile = new ZipFile(classpathFile);
-            classFilesMap = new HashMap<String, ZipEntry>( (zipFile.size() / 2) + 1);//in case zero length
+            classFilesMap = new HashMap<>( (zipFile.size() / 2) + 1);//in case zero length
              scanZipFile(classRelativePath, zipFile);
         } catch (IOException e) {
             ioExceptionOnOpen = true;
@@ -46,12 +47,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
     private void scanZipFile(ClassRelativePath classRelativePath, ZipFile zipFile) {
         String prevParentRelativePath = null;
         ScanPathMatch prevMatchStatus = null;
-        int entryIdx = 0;
         for(Enumeration<? extends ZipEntry> entries = zipFile.entries(); entries.hasMoreElements();) {
-            if( (entryIdx % 1024) ==0 && interruptionChecker.checkAndReturn()) {
-                return;
-            }
-
             final ZipEntry zipEntry = entries.nextElement();
             if(zipEntry.isDirectory()) { continue; } // Ignore directory entries, they are not used
 
@@ -78,20 +74,6 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
         }
     }
 
-    @Override
-    protected void doParseClassFile(ZipEntry zipEntry, ClassFileBinaryParser parser, ScanSpecification specification,
-                                    ConcurrentLinkedQueue<ClassInfoBuilder> infoBuilders)
-            throws IOException {
-        if(!ioExceptionOnOpen) {
-            try (InputStream stream = zipFile.getInputStream(zipEntry)){
-                ClassInfoBuilder infoBuilder = parser.readClassInfoFromClassFileHeader(stream);
-                if(infoBuilder != null) {
-                    infoBuilders.add(infoBuilder);
-                }
-            }
-        }
-    }
-
     public void close() {
         try {
             if(zipFile != null) {
@@ -104,4 +86,25 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
     }
 
     private ZipFile zipFile;
+
+    @Override
+    public Iterator<InputStream> iterator() {
+        return new Iterator<InputStream>() {
+            private Iterator<ZipEntry> zipEntryIterator = classFilesMap.values().iterator();
+
+            @Override
+            public boolean hasNext() {
+                return zipEntryIterator.hasNext();
+            }
+
+            @Override
+            public InputStream next() {
+                try {
+                    return zipFile.getInputStream(zipEntryIterator.next());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+    }
 }
