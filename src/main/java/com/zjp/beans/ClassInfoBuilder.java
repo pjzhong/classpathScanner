@@ -3,7 +3,6 @@ package com.zjp.beans;
 import com.zjp.utils.StringUtils;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Created by Administrator on 10/28/2017.

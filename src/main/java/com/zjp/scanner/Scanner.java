@@ -85,12 +85,7 @@ import java.util.concurrent.*;
         WorkQueue<InputStream> streamWorkQueue = null;
         try {
            streamWorkQueue = new WorkQueue<>(
-                    queue -> {
-                        for(ClasspathElement element : classpathOrder) {
-                            Iterator<InputStream> streamIterator = element.iterator();
-                            streamIterator.forEachRemaining(queue::addWorkUnit);
-                        }
-                    },
+                    queue -> classpathOrder.forEach(e -> e.iterator().forEachRemaining(queue::addWorkUnit)),
                     stream -> {
                         try {
                             ClassInfoBuilder builder = parser.readClassInfoFromClassFileHeader(stream);
