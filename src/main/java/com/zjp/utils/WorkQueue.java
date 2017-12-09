@@ -17,25 +17,25 @@ public class WorkQueue<T> implements AutoCloseable {
      * why using double check here, I am a bit of confusing
      * */
     public void runWorkers() throws InterruptedException, ExecutionException {
-        while ( (numWorkUnitsRemaining.get() > 0) || (producers.get() > 0)) {
-            interruptionChecker.check();
-            T workUnit = workQueue.poll();
+        while (true) {
+            T workUnit = null;
+            while(producers.get() > 0 || !workQueue.isEmpty()) {
+                interruptionChecker.check();
+                workUnit = workQueue.poll();
+                if(workUnit != null) { break;}
+            }
 
-            if(workUnit != null) {
-                try {
-                    workUnitProcessor.processWorkUnit(workUnit);
-                } catch (Exception e) {
-                    throw interruptionChecker.executionException(e);
-                } finally {
-                    numWorkUnitsRemaining.decrementAndGet();
-                }
+            if(workUnit == null) { return; }
+            try {
+                workUnitProcessor.processWorkUnit(workUnit);
+            } catch (Exception e) {
+                throw interruptionChecker.executionException(e);
             }
         }
     }
 
     public void runProducer()  throws Exception {
         try {
-            producers.incrementAndGet();
             workUnitProducer.produceWorkUnit(this);
         } finally {
             producers.decrementAndGet();
@@ -44,6 +44,8 @@ public class WorkQueue<T> implements AutoCloseable {
 
     public void start(final ExecutorService executorService, int numWorkers) {
         if(workUnitProducer != null) {
+            producers.incrementAndGet();
+
             workerFutures.add(executorService.submit( () -> {
                 try {
                     runProducer();
@@ -72,7 +74,7 @@ public class WorkQueue<T> implements AutoCloseable {
                 future.cancel(true);
             } catch (final Exception e) {
                 //todo log this exception
-               /* interruptionChecker.executionException(e);*/
+                interruptionChecker.executionException(e);
             }
         }
         if (uncompletedWork) {
@@ -82,7 +84,7 @@ public class WorkQueue<T> implements AutoCloseable {
 
     /** Add a unit of work. May be called by workers to add more work units to the tail of the queue. */
     public void addWorkUnit(final T workUnit) {
-        numWorkUnitsRemaining.incrementAndGet();
+        /*numWorkUnitsRemaining.incrementAndGet();*/
         workQueue.add(workUnit);
     }
 
