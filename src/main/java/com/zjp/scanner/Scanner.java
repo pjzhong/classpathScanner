@@ -75,6 +75,7 @@ import java.util.concurrent.*;
         for(ClasspathElement element : classpathOrder) {
             element.maskFiles(encounteredClassFile);
         }
+        encounteredClassFile.clear();
 
         /**
          * start to parse the class files found in the runtime context
@@ -107,8 +108,6 @@ import java.util.concurrent.*;
         System.out.println("parsed done cost:" + (System.nanoTime() - parseStart));
 
 
-
-
         /**
          * build the classGraph in single-thread
          * */
@@ -127,7 +126,7 @@ import java.util.concurrent.*;
         final List<ClasspathElement<?>> order = new ArrayList<>();
         for(ClassRelativePath relativePath : rawPaths) {
             ClasspathElement element = elementMap.get(relativePath);
-            if(element != null) { order.add(elementMap.get(relativePath)); }
+            if(element != null && !element.isEmpty()) { order.add(elementMap.get(relativePath)); }
         }
         return order;
     }

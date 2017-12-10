@@ -33,6 +33,10 @@ public abstract class ClasspathElement<F>  implements AutoCloseable, Iterable<In
         maskedRelativePaths.forEach(classFilesMap::remove);
     }
 
+    public boolean isEmpty() {
+        return classFilesMap.isEmpty();
+    }
+
     /**
      * iterate through all the inputStreams(open from the file founded in this ClasspathElement)
      * @return an Iterator.
