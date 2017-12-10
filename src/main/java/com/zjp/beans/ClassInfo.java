@@ -4,7 +4,6 @@ import com.zjp.utils.MultiSet;
 import com.zjp.utils.StringUtils;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Created by Administrator on 11/6/2017.
@@ -64,10 +63,10 @@ public class ClassInfo implements Comparable<ClassInfo> {
             this.addRelatedClass(Relation.ANNOTATIONS, annotationClass);
             annotationClass.addRelatedClass(Relation.ANNOTATED_CLASSES, this);
 
-            if(annotationInfoList == null) {
-                annotationInfoList = new HashMap<>(2);
+            if(annotations == Collections.EMPTY_MAP) {
+                annotations = new HashMap<>(2);
             }
-            annotationInfoList.put(annotation.getName(), annotation);
+            annotations.put(annotation.getName(), annotation);
         }
     }
 
@@ -91,17 +90,19 @@ public class ClassInfo implements Comparable<ClassInfo> {
 
     /** Add field info. */
     void addFieldInfo(final List<FieldInfo> fieldInfoList) {
-        if (this.fieldInfoList == null) {
+        if (this.fieldInfoList == Collections.EMPTY_LIST) {
             this.fieldInfoList = new ArrayList<>();
         }
+
         this.fieldInfoList.addAll(fieldInfoList);
     }
 
     /** Add method info. */
     void addMethodInfo(final List<MethodInfo> methodInfoList) {
-        if (this.methodInfoList == null) {
+        if (this.methodInfoList == Collections.EMPTY_LIST) {
             this.methodInfoList = new ArrayList<>();
         }
+
         this.methodInfoList.addAll(methodInfoList);
     }
 
@@ -179,11 +180,11 @@ public class ClassInfo implements Comparable<ClassInfo> {
     }
 
     public List<FieldInfo> getFieldInfoList() {
-        return fieldInfoList == null ? Collections.EMPTY_LIST : Collections.unmodifiableList(fieldInfoList);
+        return  Collections.unmodifiableList(fieldInfoList);
     }
 
     public List<MethodInfo> getMethodInfoList() {
-        return methodInfoList == null ? Collections.EMPTY_LIST: Collections.unmodifiableList(methodInfoList);
+        return Collections.unmodifiableList(methodInfoList);
     }
 
     ClassInfo(String className) {
@@ -229,9 +230,9 @@ public class ClassInfo implements Comparable<ClassInfo> {
      * */
     boolean classFileScanned;
 
-    private List<FieldInfo> fieldInfoList;
-    private List<MethodInfo> methodInfoList;
-    private Map<String, AnnotationInfo> annotationInfoList;
+    private List<FieldInfo> fieldInfoList = Collections.EMPTY_LIST;
+    private List<MethodInfo> methodInfoList = Collections.EMPTY_LIST;
+    private Map<String, AnnotationInfo> annotations = Collections.EMPTY_MAP;
 
     private enum Relation {
         SUPERCLASSES,

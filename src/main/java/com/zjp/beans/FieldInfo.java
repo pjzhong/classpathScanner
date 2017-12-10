@@ -145,5 +145,5 @@ public class FieldInfo {
     private final String typeStr;
 
     private  Object constantValue = null;
-    private Map<String, AnnotationInfo> annotations;
+    private Map<String, AnnotationInfo> annotations = Collections.EMPTY_MAP;
 }
