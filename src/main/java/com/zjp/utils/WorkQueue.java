@@ -17,6 +17,7 @@ public class WorkQueue<T> implements AutoCloseable {
      * why using double check here, I am a bit of confusing
      * */
     public void runWorkers() throws InterruptedException, ExecutionException {
+
         while (true) {
             T workUnit = null;
             while(producers.get() > 0 || !workQueue.isEmpty()) {
@@ -45,7 +46,6 @@ public class WorkQueue<T> implements AutoCloseable {
     public void start(final ExecutorService executorService, int numWorkers) {
         if(workUnitProducer != null) {
             producers.incrementAndGet();
-
             workerFutures.add(executorService.submit( () -> {
                 try {
                     runProducer();
