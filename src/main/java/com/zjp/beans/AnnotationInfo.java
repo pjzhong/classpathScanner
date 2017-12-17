@@ -20,7 +20,7 @@ public class AnnotationInfo {
     }
 
     public void addValue(String name, List<Object> value) {
-        if(values.isEmpty()) { values = new HashMap<>(4); }
+        if(values == Collections.EMPTY_MAP) { values = new HashMap<>(4); }
         MultiMap.putAll(values, name, value);
     }
 

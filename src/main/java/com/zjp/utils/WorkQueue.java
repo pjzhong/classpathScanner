@@ -17,9 +17,9 @@ public class WorkQueue<T> implements AutoCloseable {
      * why using double check here, I am a bit of confusing
      * */
     public void runWorkers() throws InterruptedException, ExecutionException {
-
+        T workUnit;
         while (true) {
-            T workUnit = null;
+            workUnit = null;
             while(producers.get() > 0 || !workQueue.isEmpty()) {
                 interruptionChecker.check();
                 workUnit = workQueue.poll();
@@ -68,7 +68,7 @@ public class WorkQueue<T> implements AutoCloseable {
 
     @Override
     public void close() throws ExecutionException {
-        final boolean uncompletedWork = (numWorkUnitsRemaining.get() > 0);
+       /* final boolean uncompletedWork = (numWorkUnitsRemaining.get() > 0);*/
         for(Future<?> future; (future = workerFutures.poll()) != null;) {
             try {
                 future.cancel(true);
@@ -77,9 +77,9 @@ public class WorkQueue<T> implements AutoCloseable {
                 interruptionChecker.executionException(e);
             }
         }
-        if (uncompletedWork) {
+    /*    if (uncompletedWork) {
             throw new RuntimeException("Called close() before completing all work units");
-        }
+        }*/
     }
 
     /** Add a unit of work. May be called by workers to add more work units to the tail of the queue. */

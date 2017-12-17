@@ -105,5 +105,6 @@ public class ClassPathElementDir extends ClasspathElement<File> {
     //do nothing;
     @Override
     public void close() {
+        classFilesMap.clear();
     }
 }

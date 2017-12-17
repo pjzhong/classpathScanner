@@ -7,62 +7,65 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Administrator on 10/15/2017.
  */
 public class ClassFileBinaryParser {
-    private static final Object placeHolder = new Object();
-    private ThreadLocal<List<Object>> localConstantPool = new ThreadLocal<>();
 
-    public ClassInfoBuilder readClassInfoFromClassFileHeader(final InputStream inputStream) throws IOException{
-        final DataInputStream classInput = new DataInputStream(new BufferedInputStream(inputStream, 1024));
+    public ClassInfoBuilder parse(final InputStream inputStream) throws IOException {
+        try {
+            final DataInputStream classInput = new DataInputStream(new BufferedInputStream(inputStream, inputStream.available()));
 
-        //Magic number
-        if(classInput.readInt() != 0xCAFEBABE) {
-            throw new RuntimeException("Not a valid class File");
-        }
-        classInput.readUnsignedShort();//Minor version
-        classInput.readUnsignedShort();//Major version
-
-        final int constantCount = classInput.readUnsignedShort();//Constant pool count
-        Object[] constantPool = new Object[constantCount];
-        for(int i = 1; i < constantCount; i++) {
-            final int tag = classInput.readUnsignedByte();
-            switch (tag) {
-                //Modified UTF8 - String
-                case 1:{constantPool[i] = classInput.readUTF();} break;
-                //byte, boolean, char, short, int are all represented by Constant_INTEGER
-                case 3:{constantPool[i] = classInput.readInt();} break;
-                // float
-                case 4:{constantPool[i] = classInput.readFloat();} break;
-                // long double-slot
-                case 5:{constantPool[i] = classInput.readLong(); i++;} break;
-                // double double-slot
-                case 6:{constantPool[i] = classInput.readDouble(); i++;} break;
-                // class String
-                case 7:
-                case 8: {constantPool[i] = classInput.readUnsignedShort();} break;
-                //Modified UTF8 - String
-                case 9:
-                case 10:
-                case 11:
-                case 12:{ classInput.skipBytes(4); } break;
-                //method handler
-                case 15:{ classInput.skipBytes(3); } break;
-                //method type
-                case 16: { classInput.skipBytes(2); } break;
-                //invoke dynamic
-                case 18: { classInput.skipBytes(4); } break;
+            //Magic number
+            if(classInput.readInt() != 0xCAFEBABE) {
+                throw new RuntimeException("Not a valid class File");
             }
+            classInput.readUnsignedShort();//Minor version
+            classInput.readUnsignedShort();//Major version
+
+            final int constantCount = classInput.readUnsignedShort();//Constant pool count
+            Object[] constantPool = ConstantPoolUtils.getConstantPool(constantCount);
+            for(int i = 1; i < constantCount; i++) {
+                final int tag = classInput.readUnsignedByte();
+                switch (tag) {
+                    //Modified UTF8 - String
+                    case 1:{constantPool[i] = classInput.readUTF();} break;
+                    //byte, boolean, char, short, int are all represented by Constant_INTEGER
+                    case 3:{constantPool[i] = classInput.readInt();} break;
+                    // float
+                    case 4:{constantPool[i] = classInput.readFloat();} break;
+                    // long double-slot
+                    case 5:{constantPool[i] = classInput.readLong(); i++;} break;
+                    // double double-slot
+                    case 6:{constantPool[i] = classInput.readDouble(); i++;} break;
+                    // class String
+                    case 7:
+                    case 8: {constantPool[i] = classInput.readUnsignedShort();} break;
+                    //Modified UTF8 - String
+                    case 9:
+                    case 10:
+                    case 11:
+                    case 12:{ classInput.skipBytes(4); } break;
+                    //method handler
+                    case 15:{ classInput.skipBytes(3); } break;
+                    //method type
+                    case 16: { classInput.skipBytes(2); } break;
+                    //invoke dynamic
+                    case 18: { classInput.skipBytes(4); } break;
+                }
+            }
+            return parse(constantPool, classInput);
+        } finally {
+            ConstantPoolUtils.clearConstantPool();
+            inputStream.close();
         }
+    }
+
+    private ClassInfoBuilder parse(Object[] constantPool, DataInputStream classInput) throws IOException {
 
         //Access flags
         final int accFlag = classInput.readUnsignedShort();
@@ -103,7 +106,7 @@ public class ClassFileBinaryParser {
                 classInput.skipBytes(attributeLength);
             }
         }
-
+        ConstantPoolUtils.clearConstantPool();
         return infoBuilder;
     }
 
@@ -202,16 +205,14 @@ public class ClassFileBinaryParser {
      * */
     private AnnotationInfo readAnnotation(final DataInputStream input, Object[] constantPool) throws IOException {
         final String annotationFieldDescriptor = readRefString(input, constantPool);
-        String annotationClassName;
-        if(annotationFieldDescriptor.charAt(0) == 'L'
-                && annotationFieldDescriptor.charAt(annotationFieldDescriptor.length() - 1) == ';' ) {
-            //Lcom/xyz/Annotation; -> com.xyz.Annotation
-            annotationClassName = annotationFieldDescriptor.substring(1, annotationFieldDescriptor.length() - 1).replace('/', '.');
-            annotationClassName = intern(annotationClassName);
+        String annotationClassName = null;
+        List<String> names = ReflectionUtils.parseTypeDescriptor(annotationFieldDescriptor);
+        if(names.isEmpty() || names.size() > 1) {
+            throw new IllegalArgumentException("Invalid typeDescriptor for annotation" +  annotationFieldDescriptor);
         } else {
-            //Should not happen, because annotation is an Object
-            annotationClassName = annotationFieldDescriptor;
+            annotationClassName = intern(names.get(0));
         }
+
         AnnotationInfo info = new AnnotationInfo(annotationClassName);
         final int numElementValuePairs = input.readUnsignedShort();
         for(int i = 0; i < numElementValuePairs; i++) {
@@ -293,9 +294,7 @@ public class ClassFileBinaryParser {
      * 复用String对象
      * */
     private String intern(final String string) {
-        if (string == null) {
-            return null;
-        }
+        Objects.requireNonNull(string);
         final String oldValue = internStringMap.putIfAbsent(string, string);
         return oldValue == null ? string : oldValue;
     }
@@ -306,4 +305,21 @@ public class ClassFileBinaryParser {
 
     //缓存重复字符串对象
     private ConcurrentMap<String, String> internStringMap;
+    //简单的数组复用
+    private static class ConstantPoolUtils {
+        private static ThreadLocal<Object[]> localConstantPool = new ThreadLocal<>();
+
+        public static Object[] getConstantPool(int constantCount) {
+            Object[] constantPool = localConstantPool.get();
+            if(constantPool == null) { localConstantPool.set(constantPool = new Object[constantCount]); }
+            if(constantPool.length < constantCount) { localConstantPool.set(constantPool = new Object[constantCount]); }
+
+            return constantPool;
+        }
+
+        public static void clearConstantPool(){
+            Object[] constantPool = localConstantPool.get();
+            if(constantPool != null) { Arrays.fill(constantPool, null); }
+        }
+    }
 }

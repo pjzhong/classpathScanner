@@ -79,6 +79,7 @@ public class ClasspathElementZip extends ClasspathElement<ZipEntry> {
             if(zipFile != null) {
                 zipFile.close();
             }
+            classFilesMap.clear();
         } catch (IOException e) {
             //todo log this
             throw new RuntimeException(e);
