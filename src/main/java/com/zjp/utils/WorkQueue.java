@@ -1,6 +1,7 @@
 package com.zjp.utils;
 
 import com.zjp.scanner.InterruptionChecker;
+import org.omg.SendingContext.RunTime;
 
 import java.util.Collection;
 import java.util.concurrent.*;
@@ -19,7 +20,7 @@ public class WorkQueue<T> implements AutoCloseable {
             workUnit = null;
             while(producers.get() > 0 || !workQueue.isEmpty()) {
                 interruptionChecker.check();
-                workUnit = workQueue.poll();
+                workUnit = workQueue.poll(500, TimeUnit.MILLISECONDS);
                 if(workUnit != null) { break;}
             }
 
@@ -45,7 +46,9 @@ public class WorkQueue<T> implements AutoCloseable {
             producers.incrementAndGet();
             workerFutures.add(executorService.submit( () -> {
                 try {
+                    long start = System.nanoTime();
                     runProducer();
+                    System.out.println("producer done, cost:" + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
                 } catch (Exception e) {
                     interruptionChecker.executionException(e);
                 }
@@ -81,7 +84,12 @@ public class WorkQueue<T> implements AutoCloseable {
 
     /** Add a unit of work. May be called by workers to add more work units to the tail of the queue. */
     public void addWorkUnit(final T workUnit) {
-        workQueue.add(workUnit);
+        try {
+            workQueue.put(workUnit);
+        } catch (InterruptedException e) {
+            System.out.println("add workUnit:" + workUnit + " was interrupted");
+        }
+
     }
 
     /** Add multiple units of work. May be called by workers to add more work units to the tail of the queue. */
@@ -92,22 +100,21 @@ public class WorkQueue<T> implements AutoCloseable {
     /** A parallel work queue. */
     public WorkQueue(final Collection<T> initialWorkUnits, final WorkUnitProcessor<T> workUnitProcessor,
                      final InterruptionChecker interruptionChecker) {
-        this(workUnitProcessor, interruptionChecker);
+        this.workUnitProcessor = workUnitProcessor;
+        this.interruptionChecker = interruptionChecker;
+        this.workQueue = new LinkedBlockingQueue<>();
         addWorkUnits(initialWorkUnits);
     }
 
     /** A parallel work queue. */
     public WorkQueue(WorkUnitProducer<T> workUnitProducer, WorkUnitProcessor<T> workUnitProcessor,
                      final InterruptionChecker interruptionChecker) {
-        this(workUnitProcessor, interruptionChecker);
-        this.workUnitProducer = workUnitProducer;
-    }
-
-    /** A parallel work queue. */
-    private WorkQueue(final WorkUnitProcessor<T> workUnitProcessor, final InterruptionChecker interruptionChecker) {
         this.workUnitProcessor = workUnitProcessor;
         this.interruptionChecker = interruptionChecker;
+        this.workUnitProducer = workUnitProducer;
+        this.workQueue = new LinkedBlockingQueue<>(workUnitProducer != null ? (Runtime.getRuntime().availableProcessors() * 100) : Integer.MAX_VALUE);
     }
+
 
     /**
      * The work Unit processor.
@@ -115,7 +122,7 @@ public class WorkQueue<T> implements AutoCloseable {
     private WorkUnitProcessor<T> workUnitProcessor;
     private WorkUnitProducer<T> workUnitProducer;
 
-    private final ConcurrentLinkedQueue<T> workQueue = new ConcurrentLinkedQueue<>();
+    private final BlockingQueue<T> workQueue;
    // private final BlockingQueue<T> workQueue = new LinkedBlockingQueue<>(100);
     /**
      * The number of work units remaining. This will always be at least workQueue.size(), but will be higher if work
