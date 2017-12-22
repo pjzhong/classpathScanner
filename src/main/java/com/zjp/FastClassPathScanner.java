@@ -121,8 +121,6 @@ public class FastClassPathScanner {
         return this;
     }
 
-
-
     private Class<?> loadClass(final String className) {
         try {
             return Class.forName(className, false, ClassLoader.getSystemClassLoader());

@@ -72,20 +72,20 @@ public class ClassFileBinaryParser {
         final boolean isSynthetic= (accFlag & 0x1000) != 0;
         if(isSynthetic) { return null; }//skip class file generate by compiler
 
-        final String className = intern(readRefString(classInput, constantPool).replace('/', '.'));
+        final String className = intern(readRefString(classInput, constantPool));
         if(className.equals("java.lang.Object")) {
             //java.lang.Object doesn't have a superclass to be linked to, can simply return
             return null;
         }
 
-        final String superclassName = intern(readRefString(classInput, constantPool).replace('/', '.'));
+        final String superclassName = intern(readRefString(classInput, constantPool));
         final ClassInfoBuilder infoBuilder = ClassInfo.builder(className, accFlag);
         infoBuilder.addSuperclass(superclassName);
 
         //Interfaces
         final int interfaceCount = classInput.readUnsignedShort();
         for(int i = 0; i < interfaceCount; i++) {
-            infoBuilder.addImplementedInterface(intern(readRefString(classInput, constantPool).replace('/', '.')));
+            infoBuilder.addImplementedInterface(intern(readRefString(classInput, constantPool)));
         }
 
         parseFields(classInput, constantPool, infoBuilder);
@@ -295,8 +295,9 @@ public class ClassFileBinaryParser {
      * */
     private String intern(final String string) {
         Objects.requireNonNull(string);
-        final String oldValue = internStringMap.putIfAbsent(string, string);
-        return oldValue == null ? string : oldValue;
+         String oldValue = internStringMap.get(string);
+        if(oldValue == null) { internStringMap.putIfAbsent(string, oldValue = string.replace('/', '.')); }
+        return oldValue;
     }
 
     public ClassFileBinaryParser() {
@@ -307,7 +308,9 @@ public class ClassFileBinaryParser {
     private ConcurrentMap<String, String> internStringMap;
     //简单的数组复用
     private static class ConstantPoolUtils {
-        private static ThreadLocal<Object[]> localConstantPool = new ThreadLocal<>();
+        private static ThreadLocal<Object[]> localConstantPool = new ThreadLocal<Object[]>() {
+            @Override protected Object[] initialValue() { return new Object[100]; }
+        } ;
 
         public static Object[] getConstantPool(int constantCount) {
             Object[] constantPool = localConstantPool.get();

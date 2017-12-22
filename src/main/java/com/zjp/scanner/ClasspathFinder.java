@@ -19,7 +19,7 @@ public class ClasspathFinder {
         //for convenient, only handler sun.misc.Launcher$AppClassLoader
         List<ClassLoaderHandler> classLoaderHandlers = Arrays.asList(new URLClassLoaderHandler());
 
-        for(ClassLoader loader : findAllClassLoaders()) {
+        for(ClassLoader loader : ClassLoaderFinder.findEvnClassLoader()) {
             for(ClassLoaderHandler handler : classLoaderHandlers) {
                 try {
                     handler.handle(loader, this);
@@ -62,10 +62,6 @@ public class ClasspathFinder {
             return true;
         }
         return false;
-    }
-
-    public List<ClassLoader> findAllClassLoaders() {
-        return Arrays.asList(ClassLoader.getSystemClassLoader());
     }
 
     private final List<String> rawClassPathStrings = new ArrayList<>();

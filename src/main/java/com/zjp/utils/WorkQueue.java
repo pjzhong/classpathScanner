@@ -13,9 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class WorkQueue<T> implements AutoCloseable {
 
-    /**
-     * why using double check here, I am a bit of confusing
-     * */
     public void runWorkers() throws InterruptedException, ExecutionException {
         T workUnit;
         while (true) {
@@ -55,7 +52,7 @@ public class WorkQueue<T> implements AutoCloseable {
             }));
         }
 
-        for(int i = 1; i < numWorkers; i++) {
+        for(int i = producers.get(); i < numWorkers; i++) {
             workerFutures.add(executorService.submit( () -> {
                 try {
                     runWorkers();
@@ -68,7 +65,7 @@ public class WorkQueue<T> implements AutoCloseable {
 
     @Override
     public void close() throws ExecutionException {
-       /* final boolean uncompletedWork = (numWorkUnitsRemaining.get() > 0);*/
+       final boolean uncompletedWork = (!workQueue.isEmpty() || producers.get() > 0);
         for(Future<?> future; (future = workerFutures.poll()) != null;) {
             try {
                 future.cancel(true);
@@ -77,14 +74,13 @@ public class WorkQueue<T> implements AutoCloseable {
                 interruptionChecker.executionException(e);
             }
         }
-    /*    if (uncompletedWork) {
+        if (uncompletedWork) {
             throw new RuntimeException("Called close() before completing all work units");
-        }*/
+        }
     }
 
     /** Add a unit of work. May be called by workers to add more work units to the tail of the queue. */
     public void addWorkUnit(final T workUnit) {
-        /*numWorkUnitsRemaining.incrementAndGet();*/
         workQueue.add(workUnit);
     }
 
@@ -120,7 +116,7 @@ public class WorkQueue<T> implements AutoCloseable {
     private WorkUnitProducer<T> workUnitProducer;
 
     private final ConcurrentLinkedQueue<T> workQueue = new ConcurrentLinkedQueue<>();
-
+   // private final BlockingQueue<T> workQueue = new LinkedBlockingQueue<>(100);
     /**
      * The number of work units remaining. This will always be at least workQueue.size(), but will be higher if work
      * units have been removed from the queue and are currently being processed. Holding this high while work is
