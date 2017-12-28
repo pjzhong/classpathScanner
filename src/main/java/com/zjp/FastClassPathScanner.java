@@ -55,7 +55,7 @@ public class FastClassPathScanner {
     }
 
     public <T> FastClassPathScanner matchSubClassOf(final Class<T> superClass,
-                                                    final SubclassMatchProcessor<T> processor) {
+                                                    final MatchProcessor<T> processor) {
         addClassMatcher(g -> {
             for(ClassInfo subClassing : g.getInfoOfClassSubClassOf(superClass)) {
                 try {
@@ -74,7 +74,7 @@ public class FastClassPathScanner {
      * Match all classes that implemented the specific interface, exclude annotation
      * */
     public <T> FastClassPathScanner matchClassesImplementing(final Class<T> targetInterface,
-                                                             final ImplementClassMatchProcessor<T> processor) {
+                                                             final MatchProcessor<T> processor) {
         addClassMatcher(g -> {
             for(ClassInfo classImplementing : g.getInfoOfClassImplementing(targetInterface)) {
                 try {
@@ -90,7 +90,7 @@ public class FastClassPathScanner {
     }
 
     public FastClassPathScanner matchClassesWithAnnotation(final Class<?> annotation,
-                                           final ClassAnnotationMatchProcessor processor) {
+                                           final MatchProcessor processor) {
         addClassMatcher( g -> {
             for(ClassInfo classWithAnnotation : g.getInfoOfClassesWithAnnotation(annotation)) {
                 try {
@@ -106,7 +106,7 @@ public class FastClassPathScanner {
     }
 
     public FastClassPathScanner matchClassesWithMethodAnnotation(final Class<?> annotation,
-                                                           final ClassAnnotationMatchProcessor processor) {
+                                                           final MatchProcessor processor) {
         addClassMatcher( g -> {
             for(ClassInfo classWithAnnotation : g.getInfoOfClassesWithMethodAnnotation(annotation)) {
                 try {
@@ -120,6 +120,55 @@ public class FastClassPathScanner {
         });
         return this;
     }
+
+    public FastClassPathScanner matchAllInterface(final MatchProcessor processor) {
+        addClassMatcher( g -> {
+            for(ClassInfo c : g.getAllInterfaces()) {
+                try {
+                    Class<?> cls = loadClass(c.getClassName());
+                    processor.processMatch(c, cls);
+                } catch (Throwable e) {
+                    //todo log this
+                    System.out.println(e);
+                }
+            }
+        });
+
+        return this;
+    }
+
+    public FastClassPathScanner matchAllStandardClass(final MatchProcessor processor) {
+        addClassMatcher( g -> {
+            for(ClassInfo c : g.getAllStandardClass()) {
+                try {
+                    Class<?> cls = loadClass(c.getClassName());
+                    processor.processMatch(c, cls);
+                } catch (Throwable e) {
+                    //todo log this
+                    System.out.println(e);
+                }
+            }
+        });
+
+        return this;
+    }
+
+    public FastClassPathScanner matchAllAnnotations(final MatchProcessor processor) {
+        addClassMatcher( g -> {
+            for(ClassInfo c : g.getAllAnnotations()) {
+                try {
+                    Class<?> cls = loadClass(c.getClassName());
+                    processor.processMatch(c, cls);
+                } catch (Throwable e) {
+                    //todo log this
+                    System.out.println(e);
+                }
+            }
+        });
+
+        return this;
+    }
+
 
     private Class<?> loadClass(final String className) {
         try {

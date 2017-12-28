@@ -1,7 +1,6 @@
 package com.zjp.utils;
 
 import com.zjp.scanner.InterruptionChecker;
-import org.omg.SendingContext.RunTime;
 
 import java.util.Collection;
 import java.util.concurrent.*;
@@ -78,7 +77,7 @@ public class WorkQueue<T> implements AutoCloseable {
             }
         }
         if (uncompletedWork) {
-            throw new RuntimeException("Called close() before completing all work units");
+            throw interruptionChecker.getExecutionException();
         }
     }
 
@@ -112,7 +111,7 @@ public class WorkQueue<T> implements AutoCloseable {
         this.workUnitProcessor = workUnitProcessor;
         this.interruptionChecker = interruptionChecker;
         this.workUnitProducer = workUnitProducer;
-        this.workQueue = new LinkedBlockingQueue<>(workUnitProducer != null ? (Runtime.getRuntime().availableProcessors() * 100) : Integer.MAX_VALUE);
+        this.workQueue = new LinkedBlockingQueue<>(workUnitProducer != null ? (Runtime.getRuntime().availableProcessors() * 50) : Integer.MAX_VALUE);
     }
 
 
@@ -123,14 +122,6 @@ public class WorkQueue<T> implements AutoCloseable {
     private WorkUnitProducer<T> workUnitProducer;
 
     private final BlockingQueue<T> workQueue;
-   // private final BlockingQueue<T> workQueue = new LinkedBlockingQueue<>(100);
-    /**
-     * The number of work units remaining. This will always be at least workQueue.size(), but will be higher if work
-     * units have been removed from the queue and are currently being processed. Holding this high while work is
-     * being done allows us to use this count to safely detect when all work has been completed. This is needed
-     * because work units can add new work units to the work queue.
-     */
-    public final AtomicInteger numWorkUnitsRemaining = new AtomicInteger();
     private final AtomicInteger producers = new AtomicInteger(0);
 
     /** The Future object added for each worker, used to detect worker completion. */

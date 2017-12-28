@@ -1,11 +1,9 @@
 package com.zjp.scanner;
 
-import com.zjp.beans.ClassInfoBuilder;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
+
 
 /** A classpath element (a directory or jarfile on the classpath).
  * leave nestedJar alone first

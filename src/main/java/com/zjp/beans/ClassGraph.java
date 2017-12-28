@@ -4,19 +4,41 @@ import com.zjp.scanner.ScanSpecification;
 import com.zjp.utils.ClassScanUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Administrator on 11/12/2017.
  */
 public class ClassGraph {
 
+    public List<ClassInfo> getAllInterfaces() {
+        return  classBeans.values()
+                .parallelStream()
+                .filter(c -> c.isInterface() && c.isClassFileScanned())
+                .collect(Collectors.toList());
+    }
+
+    public List<ClassInfo> getAllAnnotations() {
+        return classBeans.values()
+                .parallelStream()
+                .filter(c -> c.isAnnotation() && c.isClassFileScanned())
+                .collect(Collectors.toList());
+    }
+
+    public List<ClassInfo> getAllStandardClass() {
+        return classBeans.values()
+                .parallelStream()
+                .filter(c -> c.isStandardClass() && c.isClassFileScanned())
+                .collect(Collectors.toList());
+    }
+
     public List<ClassInfo> getInfoOfClassSuperClassOf(Class<?> target) {
-        final ClassInfo info = classNameToInfo.get(target.getName());
+        final ClassInfo info = classBeans.get(target.getName());
         return (info == null) ? Collections.EMPTY_LIST : new ArrayList<>(info.getSuperClasses());
     }
 
     public List<ClassInfo> getInfoOfClassSubClassOf(Class<?> target) {
-        final ClassInfo info = classNameToInfo.get(target.getName());
+        final ClassInfo info = classBeans.get(target.getName());
         return (info == null) ? Collections.EMPTY_LIST : new ArrayList<>(info.getSubClasses());
     }
 
@@ -24,7 +46,7 @@ public class ClassGraph {
      * return all standard class(include abstract) that implementing the specific interface,exclude interface and annotation
      * */
     public List<ClassInfo> getInfoOfClassImplementing(Class<?> targetInterfaces) {
-        final ClassInfo info = classNameToInfo.get(ClassScanUtils.interfaceName(targetInterfaces));
+        final ClassInfo info = classBeans.get(ClassScanUtils.interfaceName(targetInterfaces));
         if(info == null) {
             return Collections.EMPTY_LIST;
         } else {
@@ -37,7 +59,7 @@ public class ClassGraph {
      * return All class that annotated by the specific annotation , exclude annotation
      */
     public List<ClassInfo> getInfoOfClassesWithMethodAnnotation(Class<?> targetAnnotation) {
-        final ClassInfo info = classNameToInfo.get(ClassScanUtils.annotationName(targetAnnotation));
+        final ClassInfo info = classBeans.get(ClassScanUtils.annotationName(targetAnnotation));
         if(info == null) {
             return Collections.EMPTY_LIST;
         } else {
@@ -49,12 +71,12 @@ public class ClassGraph {
     }
 
     public List<ClassInfo> getInfoOfClassesWithFieldAnnotation(Class<?> targetAnnotation) {
-        final ClassInfo info = classNameToInfo.get(ClassScanUtils.annotationName(targetAnnotation));
+        final ClassInfo info = classBeans.get(ClassScanUtils.annotationName(targetAnnotation));
         return (info == null) ? Collections.EMPTY_LIST : new ArrayList<>(info.getClassesWithFieldAnnotation());
     }
 
     public List<ClassInfo> getInfoOfClassesWithAnnotation(Class<?> targetAnnotation) {
-        final ClassInfo info = classNameToInfo.get(ClassScanUtils.annotationName(targetAnnotation));
+        final ClassInfo info = classBeans.get(ClassScanUtils.annotationName(targetAnnotation));
         return (info == null) ? Collections.EMPTY_LIST : new ArrayList<>(info.getClassesWithAnnotation());
     }
 
@@ -102,10 +124,10 @@ public class ClassGraph {
 
     ClassGraph(ScanSpecification specification, Map<String, ClassInfo> infoMap) {
         this.specification = specification;
-        this.classNameToInfo = infoMap;
+        this.classBeans = infoMap;
     }
 
-    public final Map<String, ClassInfo> classNameToInfo;
+    public final Map<String, ClassInfo> classBeans;
     private final ScanSpecification specification;
     private enum ClassType {
         ALL,
