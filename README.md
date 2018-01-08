@@ -1,7 +1,7 @@
 # FastClasspathScanner
 
-For more info, click this<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>
-更多信息，点击这里<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>
+For more info, click this<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>.
+更多信息，点击这里<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>.
 ## License
 
 The MIT License (MIT)
