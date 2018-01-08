@@ -1,6 +1,7 @@
 # FastClasspathScanner
 
-**For more info, click this<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-**classpath-scanner</a>.
+For more info, click this<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>.
+<br/>
 更多信息，点击这里<a href="https://github.com/lukehutch/fast-classpath-scanner">https://github.com/lukehutch/fast-classpath-scanner</a>.
 ## License
 
